@@ -6,13 +6,8 @@ library(reshape2)
 #Load model functions
 source("beds_needed_uclh_functions.R")
 
-run_duration = 90 #run duration in days
-
-# Covid admission incidence:
-sigmoid = function(params, x) {
-  params[1] / (1 + exp(-params[2] * (x - params[3])))
-}
-cov_curve = c(sigmoid(c(15,0.1,15),seq(1,run_duration,1))) #currently just a random curve
+cov_curve_all = read.csv("200331_pietro_pred.csv")
+run_duration = max(cov_curve_all$day) #run duration in days
 
 params = list(
   # Pathways:
@@ -45,29 +40,50 @@ ggplot(results_beds) +
 
 
 #multiple simulations
+
+## BASE SCENARIO ####
+
+cov_curve = cov_curve_all$basic
 results = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
 
-#current bed capacity (don't know these, so just picked some)
-ICU_capacity = 117
-HDU_capacity = 8
-ward_capacity = 150
+results$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results[,1]))
 
-ggplot(results) +
-  geom_line(aes(time, ICU_beds, colour = "ICU")) +
-  geom_ribbon(aes(time, ymin = ICU_beds - ICU_beds_sd,
-                  ymax = ICU_beds + ICU_beds_sd, fill = "ICU"), alpha = 0.3) +
-  geom_hline(aes(yintercept = ICU_capacity, colour = "ICU")) +
-  geom_line(aes(time, HDU_beds, colour = "HDU")) +
-  geom_ribbon(aes(time, ymin = HDU_beds - HDU_beds_sd,
-                  ymax = HDU_beds + HDU_beds_sd, fill = "HDU"), alpha = 0.3) +
-  geom_hline(aes(yintercept = HDU_capacity, colour = "HDU")) +
-  geom_line(aes(time, ward_beds, colour = "Ward")) +
-  geom_ribbon(aes(time, ymin = ward_beds - ward_beds_sd,
-                  ymax = ward_beds + ward_beds_sd, fill = "Ward"), alpha = 0.3) +
-  geom_hline(aes(yintercept = ward_capacity, colour = "Ward")) +
-  labs(colour = "Bed category:", x = "Time (days)", y = "Beds needed") +
-  guides(fill = FALSE)
+plot_multi(results, save = T, filename = "cov_pred_base")
+
+## 20% REDUCTION SCENARIO ####
+
+cov_curve = cov_curve_all$X20pred
+results = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
+
+results$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results[,1]))
+
+plot_multi(results, save = T, filename = "cov_pred_x20")
 
 
+## 60% REDUCTION SCENARIO ####
 
+cov_curve = cov_curve_all$X60pred
+results = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
+
+results$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results[,1]))
+
+plot_multi(results, save = T, filename = "cov_pred_x60")
+
+
+
+
+## Some quick and not clean compilation of results ####
+
+icu_peak = which.max(results$ICU_beds)
+hdu_peak = which.max(results$HDU_beds)
+
+icu_peak
+results$ICU_beds[icu_peak]
+results$ICU_beds[icu_peak] + results$ICU_beds_sd[icu_peak]
+results$ICU_beds[icu_peak] - results$ICU_beds_sd[icu_peak]
+
+hdu_peak
+results$HDU_beds[hdu_peak]
+results$HDU_beds[hdu_peak] + results$HDU_beds_sd[hdu_peak]
+results$HDU_beds[hdu_peak] - results$HDU_beds_sd[hdu_peak]
 

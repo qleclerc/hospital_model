@@ -151,3 +151,39 @@ multi_uclh_model = function(nruns, cov_curve, params, run_duration) {
   return(summary_results)
   
 }
+
+
+
+plot_multi = function(results, save = F, filename = "plot"){
+  
+  #current bed capacity (don't know these, so just picked some)
+  ICU_capacity = 117
+  HDU_capacity = c(rep(0,20), # nothing until 27th March
+                   rep(8,19), # 8 until 15th April
+                   rep(116,20), # on 15th April until early May (5th?)
+                   rep(155,length(cov_curve) - 59)) # jump to
+  hdf <- tibble(time = seq_along(HDU_capacity), capacity = HDU_capacity)
+  hdf$date <- results$date
+  
+  gg = ggplot(results) +
+    geom_line(aes(date, ICU_beds, colour = "ICU")) +
+    geom_ribbon(aes(date, ymin = ICU_beds - ICU_beds_sd,
+                    ymax = ICU_beds + ICU_beds_sd, fill = "ICU"), alpha = 0.3) +
+    geom_hline(aes(yintercept = ICU_capacity, colour = "ICU")) +
+    geom_line(aes(date, HDU_beds, colour = "HDU")) +
+    geom_ribbon(aes(date, ymin = HDU_beds - HDU_beds_sd,
+                    ymax = HDU_beds + HDU_beds_sd, fill = "HDU"), alpha = 0.3) +
+    geom_line(data = hdf, aes(x = date, y = capacity, colour = "HDU")) +
+    # geom_line(aes(time, ward_beds, colour = "Ward")) +
+    # geom_ribbon(aes(time, ymin = ward_beds - ward_beds_sd,
+    #                 ymax = ward_beds + ward_beds_sd, fill = "Ward"), alpha = 0.3) +
+    # geom_hline(aes(yintercept = ward_capacity, colour = "Ward")) +
+    labs(colour = "Bed category:", x = "Time (days)", y = "Beds needed") +
+    guides(fill = FALSE)
+  
+  plot(gg)
+  
+  if (save == T) ggsave(paste0(filename,".png"))
+  
+  
+}
