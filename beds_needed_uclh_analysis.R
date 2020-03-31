@@ -17,10 +17,10 @@ cov_curve = c(sigmoid(c(15,0.1,15),seq(1,run_duration,1))) #currently just a ran
 params = list(
   # Pathways:
   #1: intubation (14 days ICU with 50% mortality, then 7 days HDU, then 14 days ward bed)
-  prop_path1 = 0.05,
+  prop_path1 = 0.08,
   ICU_mortality = 0.5,
   #2: no intubation (7 days HDU with 20% mortality, then 10 days ward)
-  #prop_path2 = 1 - prop_path1
+  prop_path2 = 0.06,
   HDU_mortality = 0.2,
   
   # LoS:
@@ -48,8 +48,8 @@ ggplot(results_beds) +
 results = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
 
 #current bed capacity (don't know these, so just picked some)
-ICU_capacity = 13
-HDU_capacity = 100
+ICU_capacity = 117
+HDU_capacity = 8
 ward_capacity = 150
 
 ggplot(results) +
@@ -67,5 +67,7 @@ ggplot(results) +
   geom_hline(aes(yintercept = ward_capacity, colour = "Ward")) +
   labs(colour = "Bed category:", x = "Time (days)", y = "Beds needed") +
   guides(fill = FALSE)
+
+
 
 

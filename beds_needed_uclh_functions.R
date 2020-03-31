@@ -14,10 +14,11 @@ uclh_model = function(cov_curve, params, run_duration){
     for (t in c(1:run_duration)) {
       
       #how many admissions at time t ?
-      new_patients = round(cov_curve[t])
+      new_patients = cov_curve[t]
+      new_patients = round(new_patients * (prop_path1 + prop_path2))
       
       #draw randomly to sort patients into pathways
-      new_patients = rbinom(new_patients, 1, 1 - prop_path1)
+      new_patients = rbinom(new_patients, 1, prop_path2/(prop_path1 + prop_path2))
       new_patients = new_patients + 1
       #so 1s will go in path 1, and 2s go in path 2 (for consistency)
       
