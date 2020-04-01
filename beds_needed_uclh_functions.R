@@ -194,7 +194,7 @@ table_multi = function(results1, results2, results3, save = F){
   icu_peak = which.max(results1$ICU_beds)
   hdu_peak = which.max(results1$HDU_beds)
   
-  res_vec = data.frame("Base",
+  res_vec = data.frame("Base (0%)",
                        results1$date[icu_peak],
                        round(results1$ICU_beds[icu_peak]),
                        round(results1$ICU_beds_sd[icu_peak]),
@@ -208,7 +208,7 @@ table_multi = function(results1, results2, results3, save = F){
   icu_peak = which.max(results2$ICU_beds)
   hdu_peak = which.max(results2$HDU_beds)
   
-  res_vec2 = data.frame("20% reduction",
+  res_vec2 = data.frame("50% reduction",
                         results2$date[icu_peak],
                         round(results2$ICU_beds[icu_peak]),
                         round(results2$ICU_beds_sd[icu_peak]),
@@ -222,7 +222,7 @@ table_multi = function(results1, results2, results3, save = F){
   icu_peak = which.max(results3$ICU_beds)
   hdu_peak = which.max(results3$HDU_beds)
   
-  res_vec3 = data.frame("60% reduction",
+  res_vec3 = data.frame("73% reduction",
                         results3$date[icu_peak],
                         round(results3$ICU_beds[icu_peak]),
                         round(results3$ICU_beds_sd[icu_peak]),
