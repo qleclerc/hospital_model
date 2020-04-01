@@ -6,7 +6,23 @@ library(reshape2)
 #Load model functions
 source("beds_needed_uclh_functions.R")
 
-cov_curve_all = read.csv("200331_pietro_pred.csv")
+cov_curve_all = read.csv("data/200331_pietro_pred.csv")
+
+cov_curve_all %>%
+  select(-day) %>%
+  mutate(Date = as.Date(Date, format = "%d/%m/%Y")) %>%
+  melt(., id.vars = "Date") %>%
+  ggplot(.) +
+  geom_line(aes(Date, value, group = variable, colour = variable)) +
+  scale_colour_discrete(breaks = c("basic", "X20pred", "X60pred"),
+                        labels = c("Basic", "20% reduction", "60% reduction")) +
+  labs(x = "Time (months)", y = "Forecasted number of COVID19 admissions", colour = "Scenario:") +
+  theme_bw()
+
+ggsave("outputs/scenarios.png")
+
+
+
 run_duration = max(cov_curve_all$day) #run duration in days
 
 params = list(
@@ -44,46 +60,51 @@ ggplot(results_beds) +
 ## BASE SCENARIO ####
 
 cov_curve = cov_curve_all$basic
-results = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
+results_base = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
+results_base$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results_base[,1]))
 
-results$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results[,1]))
-
-plot_multi(results, save = T, filename = "cov_pred_base")
+plot_multi(results_base, save = T, filename = "cov_pred_base")
 
 ## 20% REDUCTION SCENARIO ####
 
 cov_curve = cov_curve_all$X20pred
-results = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
+results_x20 = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
+results_x20$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results_x20[,1]))
 
-results$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results[,1]))
-
-plot_multi(results, save = T, filename = "cov_pred_x20")
+plot_multi(results_x20, save = T, filename = "cov_pred_x20")
 
 
 ## 60% REDUCTION SCENARIO ####
 
 cov_curve = cov_curve_all$X60pred
-results = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
+results_x60 = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
+results_x60$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results_x60[,1]))
 
-results$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results[,1]))
-
-plot_multi(results, save = T, filename = "cov_pred_x60")
-
+plot_multi(results_x60, save = T, filename = "cov_pred_x60")
 
 
+## Compilation of results ####
 
-## Some quick and not clean compilation of results ####
+table_multi(results_base, results_x20, results_x60, save = T)
 
-icu_peak = which.max(results$ICU_beds)
-hdu_peak = which.max(results$HDU_beds)
 
-icu_peak
-results$ICU_beds[icu_peak]
-results$ICU_beds[icu_peak] + results$ICU_beds_sd[icu_peak]
-results$ICU_beds[icu_peak] - results$ICU_beds_sd[icu_peak]
+#plot deaths - not a dedicated function yet:
+ggplot() +
+  geom_line(data = results_base, aes(date, deaths, colour = "1")) +
+  geom_ribbon(data = results_base, aes(date, ymin = deaths - deaths_sd,
+                                       ymax = deaths + deaths_sd, fill = "1"), alpha = 0.3) +
+  geom_line(data = results_x20, aes(date, deaths, colour = "2")) +
+  geom_ribbon(data = results_x20, aes(date, ymin = deaths - deaths_sd,
+                                      ymax = deaths + deaths_sd, fill = "2"), alpha = 0.3) +
+  geom_line(data = results_x60, aes(date, deaths, colour = "3")) +
+  geom_ribbon(data = results_x60, aes(date, ymin = deaths - deaths_sd,
+                                      ymax = deaths + deaths_sd, fill = "3"), alpha = 0.3) +
+  scale_colour_discrete(breaks = c("1", "2", "3"),
+                        labels = c("Basic", "20% reduction", "60% reduction")) +
+  labs(x = "Time (months)", y = "Incidence of COVID19 deaths in hospital", colour = "Scenario:") +
+  guides(fill = FALSE) +
+  scale_y_continuous(breaks = seq(0,60,10)) +
+  theme_bw()
 
-hdu_peak
-results$HDU_beds[hdu_peak]
-results$HDU_beds[hdu_peak] + results$HDU_beds_sd[hdu_peak]
-results$HDU_beds[hdu_peak] - results$HDU_beds_sd[hdu_peak]
+ggsave("outputs/deaths.png")
 
