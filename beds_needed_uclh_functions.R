@@ -201,7 +201,9 @@ table_multi = function(results1, results2, results3, save = F){
                        results1$date[hdu_peak],
                        round(results1$HDU_beds[hdu_peak]),
                        round(results1$HDU_beds_sd[hdu_peak]),
-                       round(sum(results1$deaths)), fix.empty.names = F)
+                       round(sum(results1$deaths)),
+                       round(sum(results1$deaths_sd)),
+                       fix.empty.names = F)
   
   icu_peak = which.max(results2$ICU_beds)
   hdu_peak = which.max(results2$HDU_beds)
@@ -213,7 +215,9 @@ table_multi = function(results1, results2, results3, save = F){
                         results2$date[hdu_peak],
                         round(results2$HDU_beds[hdu_peak]),
                         round(results2$HDU_beds_sd[hdu_peak]),
-                        round(sum(results2$deaths)), fix.empty.names = F)
+                        round(sum(results2$deaths)),
+                        round(sum(results2$deaths_sd)),
+                        fix.empty.names = F)
   
   icu_peak = which.max(results3$ICU_beds)
   hdu_peak = which.max(results3$HDU_beds)
@@ -225,13 +229,16 @@ table_multi = function(results1, results2, results3, save = F){
                         results3$date[hdu_peak],
                         round(results3$HDU_beds[hdu_peak]),
                         round(results3$HDU_beds_sd[hdu_peak]),
-                        round(sum(results3$deaths)), fix.empty.names = F)
+                        round(sum(results3$deaths)),
+                        round(sum(results3$deaths_sd)),
+                        fix.empty.names = F)
   
   res_table = rbind(res_vec, res_vec2, res_vec3)
   colnames(res_table) = c("Scenario",
                           "Peak ICU bed needs timing", "Mean peak ICU bed needs", "ICU SD",
                           "Peak HDU bed needs timing","Mean peak HDU bed needs", "HDU SD",
-                          "Cumulative deaths")
+                          "Cumulative deaths",
+                          "Deaths SD")
   
   if (save == T) openxlsx::write.xlsx(res_table, "outputs/summary_table.xlsx")
   

@@ -13,7 +13,7 @@ header-includes:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo=FALSE, message=FALSE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
 library(ggplot2)
 library(dplyr)
 library(reshape2)
@@ -27,7 +27,7 @@ cov_curve_all = read.csv("data/200331_pietro_pred.csv")
 colnames(cov_curve_all)[1] = "Date" #fix colnames
 
 run_duration = max(cov_curve_all$day) #run duration in days
-nruns = 10
+nruns = 500
 params = list(
   # Pathways:
   #1: intubation (14 days ICU with 50% mortality, then 7 days HDU, then 14 days ward bed)
@@ -45,7 +45,7 @@ params = list(
 
 ```
 
-# Model input:
+# Model input
 
 - Forecasted COVID19 hospital admissions, taking Pietro/Richard forecasts for 20% reduction / 60% reduction in contact rates (Figure \@ref(fig:covcurves))
 - Patient pathways
@@ -74,7 +74,7 @@ ggsave("outputs/scenarios.png")
 ```
 
 
-# Model principle:
+# Model principle
 
 This model simulates the next few weeks of the epidemic. Every day, we assume 14% (8+6%) of forecasted COVID19 admissions require critical care. For each admission, we randomly draw the pathway based on the proportions provided as input. The model then simulates the length of stay for each step in the pathway for each patient.
 
@@ -82,11 +82,11 @@ For example, if a patient is admitted on day 1 and goes through pathway 1, we fi
 We repeat the process to draw a length of stay for each remaining step (type of bed occupancy) in turn on the pathway, systematically recording the time interval when a bed will be needed. This allows us to account for the fact that beds are only needed for a limited period of time, and will eventually become available again for other patients.
 
 
-# Model output:
+# Model output
 
 The model outputs the number of beds that would be needed each day to accommodate all of the admitted COVID19 patients. The model can be run multiple times to provide us a mean and error range for these outputs. The uncertainty presented arises from the stochastic model sampling from distributions in length of stays in each bed type, and from proportions to assign the pathways to each patient. 
 
-Results from 500 model runs for each of the 3 scenarios (base, 20% reduction and 60% reduction) are presented below in Figures \@ref(fig:base), \@ref(fig:x20), \@ref(fig:x60) and \@ref(fig:deaths), and Tables \@ref(tab:Tbase), \@ref(tab:Tx20), \@ref(tab:Tx60) and \@ref(tab:Tsummary).
+Results from 200 model runs for each of the 3 scenarios (base, 20% reduction and 60% reduction) are presented below in Figures \@ref(fig:base), \@ref(fig:x20), \@ref(fig:x60) and \@ref(fig:deaths), and Tables \@ref(tab:Tsummary), \@ref(tab:Tbase), \@ref(tab:Tx20) and \@ref(tab:Tx60).
 
 
 ```{r base, fig.cap="Output from 500 model runs for the base reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units.Lines are average daily incidence, shaded area represents average +/- standard deviation."}
@@ -99,7 +99,7 @@ plot_multi(results_base, save = T, filename = "cov_pred_base")
 
 ```
 
-```{r x20, fig.cap="Output from 500 model runs for the 20% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units.Lines are average daily incidence, shaded area represents average +/- standard deviation."}
+```{r x20, fig.cap="Output from 500 model runs for the 20% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
 
 cov_curve = cov_curve_all$X20pred
 results_x20 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
@@ -109,7 +109,7 @@ plot_multi(results_x20, save = T, filename = "cov_pred_x20")
 
 ```
 
-```{r x60, fig.cap="Output from 500 model runs for the 60% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units.Lines are average daily incidence, shaded area represents average +/- standard deviation."}
+```{r x60, fig.cap="Output from 500 model runs for the 60% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
 
 cov_curve = cov_curve_all$X60pred
 results_x60 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
@@ -145,37 +145,71 @@ ggsave("outputs/deaths.png")
 
 ******
 
-```{r Tbase, eval=FALSE}
-
-tab = table_multi(results_base, results_x20, results_x60, save = F)
-knitr::kable(results_base, caption = "Model output from 500 model runs for the base reduction scenario.")
-
-```
-
-```{r Tx20, eval=FALSE}
-
-tab = table_multi(results_base, results_x20, results_x60, save = F)
-knitr::kable(results_x20, caption = "Model output from 500 model runs for the base reduction scenario.")
-
-```
-
-```{r Tx60, eval=FALSE}
-
-tab = table_multi(results_base, results_x20, results_x60, save = F)
-knitr::kable(results_x60, caption = "Model output from 500 model runs for the base reduction scenario.")
-
-```
-
 ```{r Tsummary}
 
 tab = table_multi(results_base, results_x20, results_x60, save = T)
 kable(tab, format = "latex", booktabs = T,
-      caption = "Model output from 500 model runs.",
+      caption = "Model output from 500 model runs. SD: standard deviation.",
       col.names = c("Scenario",
                     "Peak time", "Mean beds", "SD",
                     "Peak time","Mean beds", "SD",
-                    "Cumulative deaths")) %>%
+                    "Mean deaths", "SD")) %>%
   kable_styling(latex_options = c("striped", "scale_down")) %>%
-  add_header_above(c(" " = 1, "ICU peak bed needs" = 3, "HDU peak bed needs" = 3, " " = 1))
+  add_header_above(c(" " = 1, "ICU peak bed needs" = 3, "HDU peak bed needs" = 3, "Cumulative deaths" = 2))
 
 ```
+
+```{r Tbase}
+
+results_base_tab = results_base %>%
+  mutate_at(vars(ICU_beds:deaths_sd), round) %>%
+  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd, deaths, deaths_sd)
+
+knitr::kable(results_base_tab,
+             caption = "Model output from 500 model runs for the base reduction scenario. SD: standard deviation.",
+             col.names = c("Date",
+                           "Bed needs", "SD",
+                           "Bed needs", "SD",
+                           "Average", "SD"),
+             longtable = T, booktabs = T) %>%
+  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Deaths" = 2)) %>%
+  kable_styling(latex_options = c("striped", "repeat_header"))
+
+```
+
+```{r Tx20}
+
+results_x20_tab = results_x20 %>%
+  mutate_at(vars(ICU_beds:deaths_sd), round) %>%
+  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd, deaths, deaths_sd)
+
+knitr::kable(results_x20_tab,
+             caption = "Model output from 500 model runs for the 20\\% reduction scenario. SD: standard deviation.",
+             col.names = c("Date",
+                           "Bed needs", "SD",
+                           "Bed needs", "SD",
+                           "Average", "SD"),
+             longtable = T, booktabs = T) %>%
+  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Deaths" = 2)) %>%
+  kable_styling(latex_options = c("striped", "repeat_header"))
+
+```
+
+```{r Tx60}
+
+results_x60_tab = results_x60 %>%
+  mutate_at(vars(ICU_beds:deaths_sd), round) %>%
+  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd, deaths, deaths_sd)
+
+knitr::kable(results_x60_tab,
+             caption = "Model output from 500 model runs for the 60\\% reduction scenario. SD: standard deviation.",
+             col.names = c("Date",
+                           "Bed needs", "SD",
+                           "Bed needs", "SD",
+                           "Average", "SD"),
+             longtable = T, booktabs = T) %>%
+  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Deaths" = 2)) %>%
+  kable_styling(latex_options = c("striped", "repeat_header")) 
+
+```
+

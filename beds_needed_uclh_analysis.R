@@ -7,6 +7,7 @@ library(reshape2)
 source("beds_needed_uclh_functions.R")
 
 cov_curve_all = read.csv("data/200331_pietro_pred.csv")
+colnames(cov_curve_all)[1] = "Date"
 
 cov_curve_all %>%
   select(-day) %>%
@@ -60,7 +61,7 @@ ggplot(results_beds) +
 ## BASE SCENARIO ####
 
 cov_curve = cov_curve_all$basic
-results_base = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
+results_base = multi_uclh_model(nruns = 10, cov_curve, params, run_duration)
 results_base$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results_base[,1]))
 
 plot_multi(results_base, save = T, filename = "cov_pred_base")
