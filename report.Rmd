@@ -47,14 +47,17 @@ params = list(
 
 # Model input
 
-- Forecasted COVID19 hospital admissions, taking Pietro/Richard forecasts for 0% (base) / 20% / 60% in contact rates (Figure \@ref(fig:covcurves))
+- Forecasted COVID19 hospital admissions, taking Pietro/Richard forecasts for 0% (base) & 20% / 40% / 50% / 60% / 73% reduction in contact rates (Figure \@ref(fig:covcurves))
 - Patient pathways
     1) intubated (mechanical ventilation) – mean LoS assumption: 14 days in ICU (with 50% mortality), 7 days HDU, 14 days ward bed, then discharge
     2) not intubated (non-invasive ventilation/CPAP) – mean LoS assumption: 7 days HDU (with 20% mortality), 10 days ward, then discharge
 - Proportion of admissions going in each pathway:
-    1) 8%
-    2) 6%
+    1) `r params$prop_path1`%
+    2) `r params$prop_path2`%
 - Note: 86% of patients go on another pathway straight to ward beds. This is not yet accounted for in the model.
+- Mortality
+    1) 50% in ICU, for those admitted straight to ICU. Otherwise they survive to discharge at end of pathway
+    2) 20% in HDU, for those admitted straight to HDU. Otherwise they survive to discharge at end of pathway
 
 ```{r covcurves, fig.cap="Forecasted daily COVID19 hospital admissions. Scenarios are: basic, 20% reduction in contact rate, and 60% reduction in contact rates."}
 
@@ -86,71 +89,44 @@ We repeat the process to draw a length of stay for each remaining step (type of 
 
 The model outputs the number of beds that would be needed each day to accommodate all of the admitted COVID19 patients. The model can be run multiple times to provide us a mean and error range for these outputs. The uncertainty presented arises from the stochastic model sampling from distributions in length of stays in each bed type, and from proportions to assign the pathways to each patient. 
 
-Results from `r nruns` model runs for each of the 3 scenarios (base, 20% reduction and 60% reduction) are presented below in Figures \@ref(fig:base), \@ref(fig:x20), \@ref(fig:x60) and \@ref(fig:deaths), and Tables \@ref(tab:Tsummary), \@ref(tab:Tbase), \@ref(tab:Tx20) and \@ref(tab:Tx60).
+Results from `r nruns` model runs for each of the 6 scenarios (base, 20%/40%/50%/60%/73% reduction) are presented below in summary Figures \@ref(fig:combicu), \@ref(fig:combhdu) and \@ref(fig:deaths), and Sumary Table \@ref(tab:Tsummary). More details for each scenario are given in \@ref(fig:base), \@ref(fig:x20), \@ref(fig:x40), \@ref(fig:x50), \@ref(fig:x60) and \@ref(fig:x73), and Tables  \@ref(tab:Tbase), \@ref(tab:Tx20), \@ref(tab:Tx40), \@ref(tab:Tx50), \@ref(tab:Tx60) and \@ref(tab:Tx73).
 
-
-```{r base, fig.cap="Output from 500 model runs for the base scenario. The horizontal lines represent the current maximum bed capacity for the different units.Lines are average daily incidence, shaded area represents average +/- standard deviation."}
+```{r gen_all, include=FALSE}
+knitr::opts_chunk$set(cache = TRUE) # SAVES runs
 
 cov_curve = cov_curve_all$X0red
 results_base = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
 results_base$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results_base[,1]))
 
-plot_multi(results_base, save = T, filename = "cov_pred_base")
-
-```
-
-```{r x20, fig.cap="Output from 500 model runs for the 20% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
-
 cov_curve = cov_curve_all$X20red
 results_x20 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
 results_x20$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results_x20[,1]))
-
-plot_multi(results_x20, save = T, filename = "cov_pred_x20")
-
-```
-
-```{r x40, fig.cap="Output from 500 model runs for the 40% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
 
 cov_curve = cov_curve_all$X40red
 results_x40 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
 results_x40$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results_x40[,1]))
 
-plot_multi(results_x40, save = T, filename = "cov_pred_x40")
-
-```
-
-```{r x50, fig.cap="Output from 500 model runs for the 50% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
-
 cov_curve = cov_curve_all$X50red
 results_x50 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
 results_x50$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results_x50[,1]))
-
-plot_multi(results_x50, save = T, filename = "cov_pred_x50")
-
-```
-
-```{r x60, fig.cap="Output from 500 model runs for the 60% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
 
 cov_curve = cov_curve_all$X60red
 results_x60 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
 results_x60$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results_x60[,1]))
 
-plot_multi(results_x60, save = T, filename = "cov_pred_x60")
-
-```
-
-```{r x73, fig.cap="Output from 500 model runs for the 73% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
-
 cov_curve = cov_curve_all$X73red
 results_x73 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
 results_x73$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results_x73[,1]))
 
-plot_multi(results_x73, save = T, filename = "cov_pred_x73")
-
 ```
 
-```{r comb_icu, fig.cap="Output ICU bed demand from 500 model runs for the 20%, 40%, 50%, 60% and 73% reduction in contact rates. The horizontal lines represent the current maximum bed capacity. Lines are average daily requirements, shaded area represents average +/- standard deviation."}
+
+## Summary
+
+
+```{r combicu, fig.cap="Output ICU bed demand from 500 model runs for the 20%, 40%, 50%, 60% and 73% reduction in contact rates. The horizontal lines represent the current maximum bed capacity. Lines are average daily requirements, shaded area represents average +/- standard deviation."}
 ICU_capacity = 117
+
 ggplot() +
   geom_line(data = results_base, aes(date, ICU_beds, colour = "1")) +
   geom_ribbon(data = results_base, aes(date, ymin = ICU_beds - ICU_beds_sd,
@@ -174,6 +150,7 @@ ggplot() +
                         labels = c("Basic(0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
   labs(x = "Time (months)", y = "Beds needed", colour = "Scenario:") +
   guides(fill = FALSE) +
+  ggtitle("ICU") + 
   theme_bw() + 
   geom_hline(aes(yintercept = ICU_capacity, colour = "ICU")) 
 
@@ -181,7 +158,9 @@ ggsave("outputs/ICU_beds_all.png")
 
 
 ```
-```{r comb_hdu, fig.cap="Output HDU bed demand from 500 model runs for the 20%, 40%, 50%, 60% and 73% reduction in contact rates. The horizontal lines represent the current maximum bed capacity. Lines are average requirements, shaded area represents average +/- standard deviation."}
+
+```{r combhdu, fig.cap="Output HDU bed demand from 500 model runs for the 20%, 40%, 50%, 60% and 73% reduction in contact rates. The horizontal lines represent the current maximum bed capacity. Lines are average requirements, shaded area represents average +/- standard deviation."}
+
 HDU_capacity = c(rep(0,20), # nothing until 27th March
                    rep(8,19), # 8 until 15th April
                    rep(116,20), # on 15th April until early May (5th?)
@@ -189,29 +168,30 @@ HDU_capacity = c(rep(0,20), # nothing until 27th March
   hdf <- tibble(time = seq_along(HDU_capacity), capacity = HDU_capacity)
   hdf$date <- results_base$date
 ggplot() +
-  geom_line(data = results_base, aes(date, ICU_beds, colour = "1")) +
-  geom_ribbon(data = results_base, aes(date, ymin = ICU_beds - ICU_beds_sd,
-                                       ymax = ICU_beds + ICU_beds_sd, fill = "1"), alpha = 0.3) +
-  geom_line(data = results_x20, aes(date, ICU_beds, colour = "2")) +
-  geom_ribbon(data = results_x20, aes(date, ymin = ICU_beds - ICU_beds_sd,
-                                      ymax = ICU_beds + ICU_beds_sd, fill = "2"), alpha = 0.3) +
-  geom_line(data = results_x40, aes(date, ICU_beds, colour = "3")) +
-  geom_ribbon(data = results_x40, aes(date, ymin = ICU_beds - ICU_beds_sd,
-                                      ymax = ICU_beds + ICU_beds_sd, fill = "3"), alpha = 0.3) +
-    geom_line(data = results_x50, aes(date, ICU_beds, colour = "4")) +
-  geom_ribbon(data = results_x50, aes(date, ymin = ICU_beds - ICU_beds_sd,
-                                      ymax = ICU_beds + ICU_beds_sd, fill = "4"), alpha = 0.3) +
-    geom_line(data = results_x60, aes(date, ICU_beds, colour = "5")) +
-  geom_ribbon(data = results_x60, aes(date, ymin = ICU_beds - ICU_beds_sd,
-                                      ymax = ICU_beds + ICU_beds_sd, fill = "5"), alpha = 0.3) +
-    geom_line(data = results_x73, aes(date, ICU_beds, colour = "6")) +
-  geom_ribbon(data = results_x73, aes(date, ymin = ICU_beds - ICU_beds_sd,
-                                      ymax = ICU_beds + ICU_beds_sd, fill = "6"), alpha = 0.3) +
+  geom_line(data = results_base, aes(date, HDU_beds, colour = "1")) +
+  geom_ribbon(data = results_base, aes(date, ymin = HDU_beds - HDU_beds_sd,
+                                       ymax = HDU_beds + HDU_beds_sd, fill = "1"), alpha = 0.3) +
+  geom_line(data = results_x20, aes(date, HDU_beds, colour = "2")) +
+  geom_ribbon(data = results_x20, aes(date, ymin = HDU_beds - HDU_beds_sd,
+                                      ymax = HDU_beds + HDU_beds_sd, fill = "2"), alpha = 0.3) +
+  geom_line(data = results_x40, aes(date, HDU_beds, colour = "3")) +
+  geom_ribbon(data = results_x40, aes(date, ymin = HDU_beds - HDU_beds_sd,
+                                      ymax = HDU_beds + HDU_beds_sd, fill = "3"), alpha = 0.3) +
+    geom_line(data = results_x50, aes(date, HDU_beds, colour = "4")) +
+  geom_ribbon(data = results_x50, aes(date, ymin = HDU_beds - HDU_beds_sd,
+                                      ymax = HDU_beds + HDU_beds_sd, fill = "4"), alpha = 0.3) +
+    geom_line(data = results_x60, aes(date, HDU_beds, colour = "5")) +
+  geom_ribbon(data = results_x60, aes(date, ymin = HDU_beds - HDU_beds_sd,
+                                      ymax = HDU_beds + HDU_beds_sd, fill = "5"), alpha = 0.3) +
+    geom_line(data = results_x73, aes(date, HDU_beds, colour = "6")) +
+  geom_ribbon(data = results_x73, aes(date, ymin = HDU_beds - HDU_beds_sd,
+                                      ymax = HDU_beds + HDU_beds_sd, fill = "6"), alpha = 0.3) +
   scale_colour_discrete(breaks = c("1", "2", "3","4","5","6"),
                         labels = c("Basic(0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
   labs(x = "Time (months)", y = "Beds needed", colour = "Scenario:") +
   guides(fill = FALSE) +
   theme_bw() + 
+  ggtitle("HDU") +
   geom_line(data = hdf, aes(x = date, y = capacity, colour = "HDU")) 
 
 ggsave("outputs/HDU_beds_all.png")
@@ -245,7 +225,7 @@ ggplot() +
                         labels = c("Basic(0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
   labs(x = "Time (months)", y = "Incidence of COVID19 deaths in hospital", colour = "Scenario:") +
   guides(fill = FALSE) +
-  scale_y_continuous(breaks = seq(0,60,10)) +
+  scale_y_continuous(breaks = seq(0,120,10)) +
   theme_bw()
 
 ggsave("outputs/deaths.png")
@@ -253,19 +233,59 @@ ggsave("outputs/deaths.png")
 
 ```
 
-******
+
 
 ```{r Tsummary}
 
 tab = table_multi(results_base, results_x50, results_x73, save = T)
 kable(tab, format = "latex", booktabs = T,
-      caption = "Model output from 500 model runs. SD: standard deviation.",
+      caption = "Model output from 500 model runs for three example scenarios. SD: standard deviation.",
       col.names = c("Scenario",
                     "Peak time", "Mean beds", "SD",
                     "Peak time","Mean beds", "SD",
                     "Mean deaths", "SD")) %>%
   kable_styling(latex_options = c("striped", "scale_down")) %>%
   add_header_above(c(" " = 1, "ICU peak bed needs" = 3, "HDU peak bed needs" = 3, "Cumulative deaths" = 2))
+
+```
+
+******
+
+## Individual scenario plots and tables 
+
+```{r base, fig.cap="Output from 500 model runs for the base scenario. The horizontal lines represent the current maximum bed capacity for the different units.Lines are average daily incidence, shaded area represents average +/- standard deviation."}
+
+plot_multi(results_base, save = T, filename = "cov_pred_base")
+
+```
+
+```{r x20, fig.cap="Output from 500 model runs for the 20% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
+
+plot_multi(results_x20, save = T, filename = "cov_pred_x20")
+
+```
+
+```{r x40, fig.cap="Output from 500 model runs for the 40% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
+
+plot_multi(results_x40, save = T, filename = "cov_pred_x40")
+
+```
+
+```{r x50, fig.cap="Output from 500 model runs for the 50% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
+
+plot_multi(results_x50, save = T, filename = "cov_pred_x50")
+
+```
+
+```{r x60, fig.cap="Output from 500 model runs for the 60% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
+
+plot_multi(results_x60, save = T, filename = "cov_pred_x60")
+
+```
+
+```{r x73, fig.cap="Output from 500 model runs for the 73% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
+
+plot_multi(results_x73, save = T, filename = "cov_pred_x73")
 
 ```
 
