@@ -123,7 +123,6 @@ results_x73$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(re
 
 ## Summary
 
-
 ```{r combicu, fig.cap="Output ICU bed demand from 500 model runs for the 20%, 40%, 50%, 60% and 73% reduction in contact rates. The horizontal lines represent the current maximum bed capacity. Lines are average daily requirements, shaded area represents average +/- standard deviation."}
 ICU_capacity = 117
 
@@ -248,6 +247,17 @@ kable(tab, format = "latex", booktabs = T,
   add_header_above(c(" " = 1, "ICU peak bed needs" = 3, "HDU peak bed needs" = 3, "Cumulative deaths" = 2))
 
 ```
+
+## Model Limitations
+
+* Uncertainty in inputs: using a poisson distribution for length of stay based on single mean values
+* Simple pathways: patients can only follow one of two pathways with fixed length of stay
+* Mortality is assumed to be randomly assigned and to occur at the end of the length of stay (may overestimate beds needed?)
+* Unlimited bed capacity: this is a prediction of bed need and does not include any competition for beds
+* Uncertainty presented reflects only uncertainty in length of stay. 
+* The population is split only by the two pathways - age / co-morbidities are not included
+* Simple ward beds are not included 
+
 
 ******
 
