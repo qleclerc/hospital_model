@@ -196,36 +196,36 @@ table_multi = function(results1, results2, results3, save = F){
   
   res_vec = data.frame("Base",
                        results1$date[icu_peak],
-                       results1$ICU_beds[icu_peak],
-                       results1$ICU_beds_sd[icu_peak],
+                       round(results1$ICU_beds[icu_peak]),
+                       round(results1$ICU_beds_sd[icu_peak]),
                        results1$date[hdu_peak],
-                       results1$HDU_beds[hdu_peak],
-                       results1$HDU_beds_sd[hdu_peak],
-                       sum(results1$deaths), fix.empty.names = F)
+                       round(results1$HDU_beds[hdu_peak]),
+                       round(results1$HDU_beds_sd[hdu_peak]),
+                       round(sum(results1$deaths)), fix.empty.names = F)
   
   icu_peak = which.max(results2$ICU_beds)
   hdu_peak = which.max(results2$HDU_beds)
   
   res_vec2 = data.frame("20% reduction",
                         results2$date[icu_peak],
-                        results2$ICU_beds[icu_peak],
-                        results2$ICU_beds_sd[icu_peak],
+                        round(results2$ICU_beds[icu_peak]),
+                        round(results2$ICU_beds_sd[icu_peak]),
                         results2$date[hdu_peak],
-                        results2$HDU_beds[hdu_peak],
-                        results2$HDU_beds_sd[hdu_peak],
-                        sum(results2$deaths), fix.empty.names = F)
+                        round(results2$HDU_beds[hdu_peak]),
+                        round(results2$HDU_beds_sd[hdu_peak]),
+                        round(sum(results2$deaths)), fix.empty.names = F)
   
   icu_peak = which.max(results3$ICU_beds)
   hdu_peak = which.max(results3$HDU_beds)
   
   res_vec3 = data.frame("60% reduction",
                         results3$date[icu_peak],
-                        results3$ICU_beds[icu_peak],
-                        results3$ICU_beds_sd[icu_peak],
+                        round(results3$ICU_beds[icu_peak]),
+                        round(results3$ICU_beds_sd[icu_peak]),
                         results3$date[hdu_peak],
-                        results3$HDU_beds[hdu_peak],
-                        results3$HDU_beds_sd[hdu_peak],
-                        sum(results3$deaths), fix.empty.names = F)
+                        round(results3$HDU_beds[hdu_peak]),
+                        round(results3$HDU_beds_sd[hdu_peak]),
+                        round(sum(results3$deaths)), fix.empty.names = F)
   
   res_table = rbind(res_vec, res_vec2, res_vec3)
   colnames(res_table) = c("Scenario",
