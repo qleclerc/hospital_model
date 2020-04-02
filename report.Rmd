@@ -10,10 +10,11 @@ header-includes:
  \usepackage{float}
  \floatplacement{figure}{H}
  \floatplacement{table}{H}
+ \usepackage[labelfont=bf]{caption}
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 library(ggplot2)
 library(dplyr)
 library(reshape2)
@@ -47,15 +48,15 @@ params = list(
 
 # Model input
 
-- Forecasted COVID19 hospital admissions, taking Pietro/Richard forecasts for 0% (base) & 20% / 40% / 50% / 60% / 73% reduction in contact rates (Figure \@ref(fig:covcurves))
+- Forecasted COVID19 hospital admissions, taking Pietro/Richard forecasts for 0% (base) / 20% / 40% / 50% / 60% / 73% reduction in contact rates (Figure \@ref(fig:covcurves))
 - Patient pathways
     1) intubated (mechanical ventilation) – mean LoS assumption: 14 days in ICU (with 50% mortality), 7 days HDU, 14 days ward bed, then discharge
     2) not intubated (non-invasive ventilation/CPAP) – mean LoS assumption: 7 days HDU (with 20% mortality), 10 days ward, then discharge
 - Proportion of admissions going in each pathway:
-    1) `r params$prop_path1`%
-    2) `r params$prop_path2`%
-- Note: 86% of patients go on another pathway straight to ward beds. This is not yet accounted for in the model.
-- Mortality
+    1) `r params$prop_path1*100`%
+    2) `r params$prop_path2*100`%
+- Note: `r (1-params$prop_path1-params$prop_path2)*100`% of patients go on another pathway straight to ward beds. This is not yet accounted for in the model.
+- Mortality:
     1) 50% in ICU, for those admitted straight to ICU. Otherwise they survive to discharge at end of pathway
     2) 20% in HDU, for those admitted straight to HDU. Otherwise they survive to discharge at end of pathway
 
@@ -67,8 +68,8 @@ cov_curve_all %>%
   melt(., id.vars = "Date") %>%
   ggplot(.) +
   geom_line(aes(Date, value, group = variable, colour = variable)) +
-  scale_colour_discrete(breaks = c("X0red", "X20red", "X40red","X50red","X60red","X73red"),
-                        labels = c("Basic(0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
+  scale_colour_discrete(breaks = c("X0red", "X20red", "X40red", "X50red", "X60red", "X73red"),
+                        labels = c("Basic (0%)", "20%", "40%", "50%", "60%", "73%"), "Reduction\nlevel") +
   labs(x = "Time (months)", y = "Forecasted number of COVID19 admissions", colour = "Scenario:") +
   theme_bw()
 
@@ -79,9 +80,9 @@ ggsave("outputs/scenarios.png")
 
 # Model principle
 
-This model simulates the next few weeks of the epidemic. Every day, we assume a fixed 14% (8+6%) of forecasted COVID19 admissions require critical care. For each admission, we randomly draw the pathway based on the proportions provided as input. The model then simulates the length of stay for each step in the pathway for each patient.
+This model simulates the next few weeks of the epidemic. Every day, we assume a fixed `r (params$prop_path1+params$prop_path2)*100`% (`r params$prop_path1*100`% + `r params$prop_path2*100`%) of forecasted COVID19 admissions require critical care. For each admission, we randomly draw the pathway based on the proportions provided as input. The model then simulates the length of stay for each step in the pathway for each patient.
 
-For example, if a patient is admitted on day 1 and goes through pathway 1, we first randomly draw the length of stay in ICU from a Poisson distribution with mean 14 days. We then record that an ICU bed is needed between day 1 and day 1 plus the randomly drawn length of stay. Before moving on to the next step, we account for mortality, by randomly drawing from a Uniform(0,1) distribution, and allowing the patient to move on to the next step of the pathway if the drawn number is higher than the proportion of deaths (here, 0.5). Otherwise, we record that a death has occured at that time.
+For example, if a patient is admitted on day 1 and goes through pathway 1, we first randomly draw the length of stay in ICU from a Poisson distribution with mean `r params$average_LoS_ICU` days. We then record that an ICU bed is needed between day 1 and day 1 plus the randomly drawn length of stay. Before moving on to the next step, we account for mortality, by randomly drawing from a Uniform(0,1) distribution, and allowing the patient to move on to the next step of the pathway if the drawn number is higher than the proportion of deaths (here, `r params$ICU_mortality`). Otherwise, we record that a death has occured at that time.
 We repeat the process to draw a length of stay for each remaining step (type of bed occupancy) in turn on the pathway, systematically recording the time interval when a bed will be needed. This allows us to account for the fact that beds are only needed for a limited period of time, and will eventually become available again for other patients.
 
 
@@ -89,10 +90,10 @@ We repeat the process to draw a length of stay for each remaining step (type of 
 
 The model outputs the number of beds that would be needed each day to accommodate all of the admitted COVID19 patients. The model can be run multiple times to provide us a mean and error range for these outputs. The uncertainty presented arises from the stochastic model sampling from distributions in length of stays in each bed type, and from proportions to assign the pathways to each patient. 
 
-Results from `r nruns` model runs for each of the 6 scenarios (base, 20%/40%/50%/60%/73% reduction) are presented below in summary Figures \@ref(fig:combicu), \@ref(fig:combhdu) and \@ref(fig:deaths), and Sumary Table \@ref(tab:Tsummary). More details for each scenario are given in \@ref(fig:base), \@ref(fig:x20), \@ref(fig:x40), \@ref(fig:x50), \@ref(fig:x60) and \@ref(fig:x73), and Tables  \@ref(tab:Tbase), \@ref(tab:Tx20), \@ref(tab:Tx40), \@ref(tab:Tx50), \@ref(tab:Tx60) and \@ref(tab:Tx73).
+Results from `r nruns` model runs for each of the 6 scenarios (base, 20%/40%/50%/60%/73% reduction) are presented below in summary Figures \@ref(fig:combicu), \@ref(fig:combhdu) and \@ref(fig:deaths), and summary Table \@ref(tab:Tsummary). More details for each scenario are given in Figures \@ref(fig:base), \@ref(fig:x20), \@ref(fig:x40), \@ref(fig:x50), \@ref(fig:x60) and \@ref(fig:x73), and Tables \@ref(tab:Tbase), \@ref(tab:Tx20), \@ref(tab:Tx40), \@ref(tab:Tx50), \@ref(tab:Tx60) and \@ref(tab:Tx73).
 
-```{r gen_all, include=FALSE}
-knitr::opts_chunk$set(cache = TRUE) # SAVES runs
+```{r gen_all, include=FALSE, cache = TRUE}
+# cache option SAVES runs !
 
 cov_curve = cov_curve_all$X0red
 results_base = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
@@ -146,7 +147,7 @@ ggplot() +
   geom_ribbon(data = results_x73, aes(date, ymin = ICU_beds - ICU_beds_sd,
                                       ymax = ICU_beds + ICU_beds_sd, fill = "6"), alpha = 0.3) +
   scale_colour_discrete(breaks = c("1", "2", "3","4","5","6"),
-                        labels = c("Basic(0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
+                        labels = c("Basic (0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
   labs(x = "Time (months)", y = "Beds needed", colour = "Scenario:") +
   guides(fill = FALSE) +
   ggtitle("ICU") + 
@@ -161,11 +162,12 @@ ggsave("outputs/ICU_beds_all.png")
 ```{r combhdu, fig.cap="Output HDU bed demand from 500 model runs for the 20%, 40%, 50%, 60% and 73% reduction in contact rates. The horizontal lines represent the current maximum bed capacity. Lines are average requirements, shaded area represents average +/- standard deviation."}
 
 HDU_capacity = c(rep(0,20), # nothing until 27th March
-                   rep(8,19), # 8 until 15th April
-                   rep(116,20), # on 15th April until early May (5th?)
-                   rep(155,length(cov_curve) - 59)) # jump to
-  hdf <- tibble(time = seq_along(HDU_capacity), capacity = HDU_capacity)
-  hdf$date <- results_base$date
+                 rep(8,19), # 8 until 15th April
+                 rep(116,20), # on 15th April until early May (5th?)
+                 rep(155,length(cov_curve) - 59)) # jump to
+hdf <- tibble(time = seq_along(HDU_capacity), capacity = HDU_capacity)
+hdf$date <- results_base$date
+
 ggplot() +
   geom_line(data = results_base, aes(date, HDU_beds, colour = "1")) +
   geom_ribbon(data = results_base, aes(date, ymin = HDU_beds - HDU_beds_sd,
@@ -186,7 +188,7 @@ ggplot() +
   geom_ribbon(data = results_x73, aes(date, ymin = HDU_beds - HDU_beds_sd,
                                       ymax = HDU_beds + HDU_beds_sd, fill = "6"), alpha = 0.3) +
   scale_colour_discrete(breaks = c("1", "2", "3","4","5","6"),
-                        labels = c("Basic(0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
+                        labels = c("Basic (0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
   labs(x = "Time (months)", y = "Beds needed", colour = "Scenario:") +
   guides(fill = FALSE) +
   theme_bw() + 
@@ -221,7 +223,7 @@ ggplot() +
   geom_ribbon(data = results_x73, aes(date, ymin = deaths - deaths_sd,
                                       ymax = deaths + deaths_sd, fill = "6"), alpha = 0.3) +
   scale_colour_discrete(breaks = c("1", "2", "3","4","5","6"),
-                        labels = c("Basic(0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
+                        labels = c("Basic (0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
   labs(x = "Time (months)", y = "Incidence of COVID19 deaths in hospital", colour = "Scenario:") +
   guides(fill = FALSE) +
   scale_y_continuous(breaks = seq(0,120,10)) +
@@ -236,9 +238,9 @@ ggsave("outputs/deaths.png")
 
 ```{r Tsummary}
 
-tab = table_multi(results_base, results_x50, results_x73, save = T)
+tab = table_multi(results_base, results_x20, results_x40, results_x50, results_x60, results_x73, save = T)
 kable(tab, format = "latex", booktabs = T,
-      caption = "Model output from 500 model runs for three example scenarios. SD: standard deviation.",
+      caption = "Summary model output from 500 model runs for all scenarios. Scenarios are: 0\\% reduction in contact rate (base), 20\\%, 40\\%, 50\\%, 60\\% and 73\\% reduction in contact rates SD: standard deviation.",
       col.names = c("Scenario",
                     "Peak time", "Mean beds", "SD",
                     "Peak time","Mean beds", "SD",
@@ -250,16 +252,14 @@ kable(tab, format = "latex", booktabs = T,
 
 ## Model Limitations
 
-* Uncertainty in inputs: using a poisson distribution for length of stay based on single mean values
-* Simple pathways: patients can only follow one of two pathways with fixed length of stay
-* Mortality is assumed to be randomly assigned and to occur at the end of the length of stay (may overestimate beds needed?)
-* Unlimited bed capacity: this is a prediction of bed need and does not include any competition for beds
-* Uncertainty presented reflects only uncertainty in length of stay. 
-* The population is split only by the two pathways - age / co-morbidities are not included
-* Simple ward beds are not included 
+- Uncertainty in inputs: using a Poisson distribution for length of stay based on single mean values
+- Simple pathways: patients can only follow one of two pathways with fixed length of stay
+- Mortality is assumed to be randomly assigned and to occur at the end of the length of stay (may overestimate beds needed?)
+- Unlimited bed capacity: this is a prediction of bed need and does not include any competition for beds
+- Uncertainty presented reflects only uncertainty in length of stay 
+- The population is split only by the two pathways - age / co-morbidities are not included
+- Simple ward beds are not included, since we do not have an estimate of length of stay for patients admitted straight to ward beds
 
-
-******
 
 ## Individual scenario plots and tables 
 
@@ -299,6 +299,10 @@ plot_multi(results_x73, save = T, filename = "cov_pred_x73")
 
 ```
 
+
+******
+
+
 ```{r Tbase}
 
 results_base_tab = results_base %>%
@@ -316,6 +320,10 @@ knitr::kable(results_base_tab,
   kable_styling(latex_options = c("striped", "repeat_header"))
 
 ```
+
+
+******
+
 
 ```{r Tx20}
 
@@ -335,6 +343,10 @@ knitr::kable(results_x20_tab,
 
 ```
 
+
+******
+
+
 ```{r Tx40}
 
 results_x40_tab = results_x40 %>%
@@ -352,6 +364,10 @@ knitr::kable(results_x40_tab,
   kable_styling(latex_options = c("striped", "repeat_header"))
 
 ```
+
+
+******
+
 
 ```{r Tx50}
 
@@ -371,6 +387,10 @@ knitr::kable(results_x50_tab,
 
 ```
 
+
+******
+
+
 ```{r Tx60}
 
 results_x60_tab = results_x60 %>%
@@ -388,6 +408,10 @@ knitr::kable(results_x60_tab,
   kable_styling(latex_options = c("striped", "repeat_header")) 
 
 ```
+
+
+******
+
 
 ```{r Tx73}
 

@@ -188,52 +188,49 @@ plot_multi = function(results, save = F, filename = "plot"){
   
 }
 
-
-table_multi = function(results1, results2, results3, save = F){
+#NOTE this function is flexible, but must be used sensibly
+#it will take any number of results inputs and make a summary table
+#however, there are no safety checks, so could break easily
+#in addition, it expects the results arguments to be named in a specific manner
+#i.e. to contain the percentage reduction (20,40 etc...)
+#if the name contains no number, the function assumes it is the "base 0%" scenario
+table_multi = function(..., save = F){
   
-  icu_peak = which.max(results1$ICU_beds)
-  hdu_peak = which.max(results1$HDU_beds)
+  res_table = c()
+  res_list = lst(...)
+  res_names = names(res_list)
+  index = 0
   
-  res_vec = data.frame("Base (0%)",
-                       results1$date[icu_peak],
-                       round(results1$ICU_beds[icu_peak]),
-                       round(results1$ICU_beds_sd[icu_peak]),
-                       results1$date[hdu_peak],
-                       round(results1$HDU_beds[hdu_peak]),
-                       round(results1$HDU_beds_sd[hdu_peak]),
-                       round(sum(results1$deaths)),
-                       round(sum(results1$deaths_sd)),
-                       fix.empty.names = F)
+  for (results in list(...)) {
+    
+    index = index + 1
+    scenario = readr::parse_number(res_names[index])
+    
+    if (is.na(scenario)) {
+      scenario = "Base (0%)"
+    } else {
+      scenario = paste0(scenario, "% reduction")
+    }
+    
+    icu_peak = which.max(results$ICU_beds)
+    hdu_peak = which.max(results$HDU_beds)
+    
+    
+    res_vec = data.frame(scenario,
+                         results$date[icu_peak],
+                         round(results$ICU_beds[icu_peak]),
+                         round(results$ICU_beds_sd[icu_peak]),
+                         results$date[hdu_peak],
+                         round(results$HDU_beds[hdu_peak]),
+                         round(results$HDU_beds_sd[hdu_peak]),
+                         round(sum(results$deaths)),
+                         round(sum(results$deaths_sd)),
+                         fix.empty.names = F)
+    
+    res_table = rbind(res_table, res_vec)
+    
+  }
   
-  icu_peak = which.max(results2$ICU_beds)
-  hdu_peak = which.max(results2$HDU_beds)
-  
-  res_vec2 = data.frame("50% reduction",
-                        results2$date[icu_peak],
-                        round(results2$ICU_beds[icu_peak]),
-                        round(results2$ICU_beds_sd[icu_peak]),
-                        results2$date[hdu_peak],
-                        round(results2$HDU_beds[hdu_peak]),
-                        round(results2$HDU_beds_sd[hdu_peak]),
-                        round(sum(results2$deaths)),
-                        round(sum(results2$deaths_sd)),
-                        fix.empty.names = F)
-  
-  icu_peak = which.max(results3$ICU_beds)
-  hdu_peak = which.max(results3$HDU_beds)
-  
-  res_vec3 = data.frame("73% reduction",
-                        results3$date[icu_peak],
-                        round(results3$ICU_beds[icu_peak]),
-                        round(results3$ICU_beds_sd[icu_peak]),
-                        results3$date[hdu_peak],
-                        round(results3$HDU_beds[hdu_peak]),
-                        round(results3$HDU_beds_sd[hdu_peak]),
-                        round(sum(results3$deaths)),
-                        round(sum(results3$deaths_sd)),
-                        fix.empty.names = F)
-  
-  res_table = rbind(res_vec, res_vec2, res_vec3)
   colnames(res_table) = c("Scenario",
                           "Peak ICU bed needs timing", "Mean peak ICU bed needs", "ICU SD",
                           "Peak HDU bed needs timing","Mean peak HDU bed needs", "HDU SD",
@@ -245,4 +242,3 @@ table_multi = function(results1, results2, results3, save = F){
   return(res_table)
   
 }
-

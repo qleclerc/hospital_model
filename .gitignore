@@ -4,3 +4,5 @@
 .Ruserdata
 report.log
 report.pdf
+report_cache/
+report_files/

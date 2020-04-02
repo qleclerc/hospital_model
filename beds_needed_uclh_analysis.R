@@ -69,7 +69,7 @@ plot_multi(results_base, save = T, filename = "cov_pred_base")
 ## 20% REDUCTION SCENARIO ####
 
 cov_curve = cov_curve_all$X20pred
-results_x20 = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
+results_x20 = multi_uclh_model(nruns = 10, cov_curve, params, run_duration)
 results_x20$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results_x20[,1]))
 
 plot_multi(results_x20, save = T, filename = "cov_pred_x20")
@@ -78,7 +78,7 @@ plot_multi(results_x20, save = T, filename = "cov_pred_x20")
 ## 60% REDUCTION SCENARIO ####
 
 cov_curve = cov_curve_all$X60pred
-results_x60 = multi_uclh_model(nruns = 500, cov_curve, params, run_duration)
+results_x60 = multi_uclh_model(nruns = 10, cov_curve, params, run_duration)
 results_x60$date <- seq(as.Date("2020/3/7"), by = "days", length.out = length(results_x60[,1]))
 
 plot_multi(results_x60, save = T, filename = "cov_pred_x60")
@@ -86,7 +86,7 @@ plot_multi(results_x60, save = T, filename = "cov_pred_x60")
 
 ## Compilation of results ####
 
-table_multi(results_base, results_x20, results_x60, save = T)
+table_multi(results_base, results_x20, results_x60, save = F)
 
 
 #plot deaths - not a dedicated function yet:
