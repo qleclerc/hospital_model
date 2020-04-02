@@ -32,6 +32,9 @@ uclh_model = function(cov_curve, params, run_duration){
           #STEP 1) patient is in ICU
           #how long will that person need a bed for?
           LoS_ICU = rpois(1, average_LoS_ICU)
+          patient_mortality = ifelse(runif(1) > ICU_mortality, FALSE, TRUE)
+          if (patient_mortality == TRUE) LoS_ICU = round(runif(1, 0, LoS_ICU))
+          
           #update the patient pathway time (capped at the simulation duration)
           step1_time = min(t + LoS_ICU, run_duration)
           #record that 1 bed will be needed between now (t) and the time of next move (step1_time)
@@ -41,7 +44,7 @@ uclh_model = function(cov_curve, params, run_duration){
           if (step1_time != run_duration) {
             
             #IF that patient does not die in ICU 
-            if (runif(1) > ICU_mortality) {
+            if (patient_mortality == FALSE) {
               
               #STEP 2) patient is in HDU
               #how long will that person need a bed for?
@@ -79,6 +82,9 @@ uclh_model = function(cov_curve, params, run_duration){
           #1) patient is in HDU
           #how long will that person need a bed for?
           LoS_HDU = rpois(1, average_LoS_HDU)
+          patient_mortality = ifelse(runif(1) > HDU_mortality, FALSE, TRUE)
+          if (patient_mortality == TRUE) LoS_HDU = round(runif(1, 0, LoS_HDU))
+          
           #update the pathway time (capped at the simulation duration)
           step1_time = min(t + LoS_HDU, run_duration)
           #record that 1 bed will be needed between now (t) and time of next move (step1_time)
@@ -88,7 +94,7 @@ uclh_model = function(cov_curve, params, run_duration){
           if (step1_time != run_duration) {
             
             #IF that patient does not die in HDU
-            if (runif(1) > HDU_mortality) {
+            if (patient_mortality == FALSE) {
               
               #2) patient is in ward
               #how long will that person need a bed for?
@@ -214,7 +220,7 @@ table_multi = function(..., save = F){
     
     icu_peak = which.max(results$ICU_beds)
     hdu_peak = which.max(results$HDU_beds)
-    
+    ward_peak = which.max(results$ward_beds)
     
     res_vec = data.frame(scenario,
                          results$date[icu_peak],
@@ -223,6 +229,9 @@ table_multi = function(..., save = F){
                          results$date[hdu_peak],
                          round(results$HDU_beds[hdu_peak]),
                          round(results$HDU_beds_sd[hdu_peak]),
+                         results$date[ward_peak],
+                         round(results$ward_beds[ward_peak]),
+                         round(results$ward_beds_sd[ward_peak]),
                          round(sum(results$deaths)),
                          round(sum(results$deaths_sd)),
                          fix.empty.names = F)
@@ -233,9 +242,9 @@ table_multi = function(..., save = F){
   
   colnames(res_table) = c("Scenario",
                           "Peak ICU bed needs timing", "Mean peak ICU bed needs", "ICU SD",
-                          "Peak HDU bed needs timing","Mean peak HDU bed needs", "HDU SD",
-                          "Cumulative deaths",
-                          "Deaths SD")
+                          "Peak HDU bed needs timing", "Mean peak HDU bed needs", "HDU SD",
+                          "Peak ward bed needs timing", "Mean peak ward bed needs", "Ward SD",
+                          "Cumulative deaths", "Deaths SD")
   
   if (save == T) openxlsx::write.xlsx(res_table, "outputs/summary_table.xlsx")
   

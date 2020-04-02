@@ -25,8 +25,8 @@ params = list(
   HDU_mortality = 0.2,
   
   # LoS:
-  average_LoS_ICU = 8, #average LoS in ICU in days
-  average_LoS_HDU = 10, #average LoS in HDU in days
+  average_LoS_ICU = 14, #average LoS in ICU in days
+  average_LoS_HDU = 7, #average LoS in HDU in days
   average_LoS_ward1 = 14, #average LoS in ward in days (pathway 1)
   average_LoS_ward2 = 10) #average LoS in ward in days (pathway 2)
 

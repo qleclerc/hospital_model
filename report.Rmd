@@ -39,8 +39,8 @@ params = list(
   HDU_mortality = 0.2,
   
   # LoS:
-  average_LoS_ICU = 8, #average LoS in ICU in days
-  average_LoS_HDU = 10, #average LoS in HDU in days
+  average_LoS_ICU = 14, #average LoS in ICU in days
+  average_LoS_HDU = 7, #average LoS in HDU in days
   average_LoS_ward1 = 14, #average LoS in ward in days (pathway 1)
   average_LoS_ward2 = 10) #average LoS in ward in days (pathway 2)
 
@@ -55,7 +55,7 @@ params = list(
 - Proportion of admissions going in each pathway:
     1) `r params$prop_path1*100`%
     2) `r params$prop_path2*100`%
-- Note: `r (1-params$prop_path1-params$prop_path2)*100`% of patients go on another pathway straight to ward beds. This is not yet accounted for in the model.
+- Note: `r (1-params$prop_path1-params$prop_path2)*100`% of COVID19 admissions are not critical care, and go on another pathway straight to ward beds. This is not yet accounted for in the model.
 - Mortality:
     1) 50% in ICU, for those admitted straight to ICU. Otherwise they survive to discharge at end of pathway
     2) 20% in HDU, for those admitted straight to HDU. Otherwise they survive to discharge at end of pathway
@@ -82,17 +82,18 @@ ggsave("outputs/scenarios.png")
 
 This model simulates the next few weeks of the epidemic. Every day, we assume a fixed `r (params$prop_path1+params$prop_path2)*100`% (`r params$prop_path1*100`% + `r params$prop_path2*100`%) of forecasted COVID19 admissions require critical care. For each admission, we randomly draw the pathway based on the proportions provided as input. The model then simulates the length of stay for each step in the pathway for each patient.
 
-For example, if a patient is admitted on day 1 and goes through pathway 1, we first randomly draw the length of stay in ICU from a Poisson distribution with mean `r params$average_LoS_ICU` days. We then record that an ICU bed is needed between day 1 and day 1 plus the randomly drawn length of stay. Before moving on to the next step, we account for mortality, by randomly drawing from a Uniform(0,1) distribution, and allowing the patient to move on to the next step of the pathway if the drawn number is higher than the proportion of deaths (here, `r params$ICU_mortality`). Otherwise, we record that a death has occured at that time.
+For example, if a patient is admitted on day 1 and goes through pathway 1, we first randomly draw the length of stay in ICU from a Poisson distribution with mean `r params$average_LoS_ICU` days. We then establish whether that patient dies, based on the mortality in ICU (here, `r params$ICU_mortality*100`%). If the patient dies, we then sample the date of death based on a Uniform distribution from 0 to the sampled length of stay above, reduce the new length of stay accordingly, and record that a death has occured at that time. If the patient does not dies, he/she moves on to the next step of the pathway.
+
 We repeat the process to draw a length of stay for each remaining step (type of bed occupancy) in turn on the pathway, systematically recording the time interval when a bed will be needed. This allows us to account for the fact that beds are only needed for a limited period of time, and will eventually become available again for other patients.
 
 
 # Model output
 
-The model outputs the number of beds that would be needed each day to accommodate all of the admitted COVID19 patients. The model can be run multiple times to provide us a mean and error range for these outputs. The uncertainty presented arises from the stochastic model sampling from distributions in length of stays in each bed type, and from proportions to assign the pathways to each patient. 
+The model outputs the number of beds that would be needed each day to accommodate all of the admitted critical care COVID19 patients. The model can be run multiple times to provide us a mean and error range for these outputs. The uncertainty presented arises from the stochastic model sampling from distributions in length of stays in each bed type, and from proportions to assign the pathways to each patient. 
 
 Results from `r nruns` model runs for each of the 6 scenarios (base, 20%/40%/50%/60%/73% reduction) are presented below in summary Figures \@ref(fig:combicu), \@ref(fig:combhdu) and \@ref(fig:deaths), and summary Table \@ref(tab:Tsummary). More details for each scenario are given in Figures \@ref(fig:base), \@ref(fig:x20), \@ref(fig:x40), \@ref(fig:x50), \@ref(fig:x60) and \@ref(fig:x73), and Tables \@ref(tab:Tbase), \@ref(tab:Tx20), \@ref(tab:Tx40), \@ref(tab:Tx50), \@ref(tab:Tx60) and \@ref(tab:Tx73).
 
-```{r gen_all, include=FALSE, cache = TRUE}
+```{r gen_all, include=FALSE, cache = FALSE}
 # cache option SAVES runs !
 
 cov_curve = cov_curve_all$X0red
@@ -240,13 +241,15 @@ ggsave("outputs/deaths.png")
 
 tab = table_multi(results_base, results_x20, results_x40, results_x50, results_x60, results_x73, save = T)
 kable(tab, format = "latex", booktabs = T,
-      caption = "Summary model output from 500 model runs for all scenarios. Scenarios are: 0\\% reduction in contact rate (base), 20\\%, 40\\%, 50\\%, 60\\% and 73\\% reduction in contact rates SD: standard deviation.",
+      caption = "Summary model output from 500 model runs for all scenarios. Scenarios are: 0\\% reduction in contact rate (base), 20\\%, 40\\%, 50\\%, 60\\% and 73\\% reduction in contact rates SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
       col.names = c("Scenario",
                     "Peak time", "Mean beds", "SD",
                     "Peak time","Mean beds", "SD",
+                    "Peak time","Mean beds", "SD",
                     "Mean deaths", "SD")) %>%
   kable_styling(latex_options = c("striped", "scale_down")) %>%
-  add_header_above(c(" " = 1, "ICU peak bed needs" = 3, "HDU peak bed needs" = 3, "Cumulative deaths" = 2))
+  add_header_above(c(" " = 1, "ICU peak bed needs" = 3, "HDU peak bed needs" = 3,
+                     "Ward peak bed needs" = 3,"Cumulative deaths" = 2))
 
 ```
 
@@ -258,7 +261,7 @@ kable(tab, format = "latex", booktabs = T,
 - Unlimited bed capacity: this is a prediction of bed need and does not include any competition for beds
 - Uncertainty presented reflects only uncertainty in length of stay 
 - The population is split only by the two pathways - age / co-morbidities are not included
-- Simple ward beds are not included, since we do not have an estimate of length of stay for patients admitted straight to ward beds
+- Simple ward beds are only included for critical care patients, NOT for total COVID19 admissions, since we do not have an estimate of length of stay for patients admitted straight to ward beds
 
 
 ## Individual scenario plots and tables 
@@ -307,16 +310,18 @@ plot_multi(results_x73, save = T, filename = "cov_pred_x73")
 
 results_base_tab = results_base %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
-  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd, deaths, deaths_sd)
+  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
+         ward_beds, ward_beds_sd, deaths, deaths_sd)
 
 knitr::kable(results_base_tab,
-             caption = "Model output from 500 model runs for the base scenario. SD: standard deviation.",
+             caption = "Model output from 500 model runs for the base scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
              col.names = c("Date",
+                           "Bed needs", "SD",
                            "Bed needs", "SD",
                            "Bed needs", "SD",
                            "Average", "SD"),
              longtable = T, booktabs = T) %>%
-  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Deaths" = 2)) %>%
+  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Ward" = 2, "Deaths" = 2)) %>%
   kable_styling(latex_options = c("striped", "repeat_header"))
 
 ```
@@ -329,16 +334,18 @@ knitr::kable(results_base_tab,
 
 results_x20_tab = results_x20 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
-  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd, deaths, deaths_sd)
+  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
+         ward_beds, ward_beds_sd, deaths, deaths_sd)
 
 knitr::kable(results_x20_tab,
-             caption = "Model output from 500 model runs for the 20\\% reduction scenario. SD: standard deviation.",
+             caption = "Model output from 500 model runs for the 20\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
              col.names = c("Date",
+                           "Bed needs", "SD",
                            "Bed needs", "SD",
                            "Bed needs", "SD",
                            "Average", "SD"),
              longtable = T, booktabs = T) %>%
-  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Deaths" = 2)) %>%
+  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Ward" = 2, "Deaths" = 2)) %>%
   kable_styling(latex_options = c("striped", "repeat_header"))
 
 ```
@@ -351,16 +358,18 @@ knitr::kable(results_x20_tab,
 
 results_x40_tab = results_x40 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
-  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd, deaths, deaths_sd)
+  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
+         ward_beds, ward_beds_sd, deaths, deaths_sd)
 
 knitr::kable(results_x40_tab,
-             caption = "Model output from 500 model runs for the 40\\% reduction scenario. SD: standard deviation.",
+             caption = "Model output from 500 model runs for the 40\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
              col.names = c("Date",
+                           "Bed needs", "SD",
                            "Bed needs", "SD",
                            "Bed needs", "SD",
                            "Average", "SD"),
              longtable = T, booktabs = T) %>%
-  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Deaths" = 2)) %>%
+  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Ward" = 2, "Deaths" = 2)) %>%
   kable_styling(latex_options = c("striped", "repeat_header"))
 
 ```
@@ -373,16 +382,18 @@ knitr::kable(results_x40_tab,
 
 results_x50_tab = results_x50 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
-  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd, deaths, deaths_sd)
+  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
+         ward_beds, ward_beds_sd, deaths, deaths_sd)
 
 knitr::kable(results_x50_tab,
-             caption = "Model output from 500 model runs for the 50\\% reduction scenario. SD: standard deviation.",
+             caption = "Model output from 500 model runs for the 50\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
              col.names = c("Date",
+                           "Bed needs", "SD",
                            "Bed needs", "SD",
                            "Bed needs", "SD",
                            "Average", "SD"),
              longtable = T, booktabs = T) %>%
-  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Deaths" = 2)) %>%
+  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Ward" = 2, "Deaths" = 2)) %>%
   kable_styling(latex_options = c("striped", "repeat_header"))
 
 ```
@@ -395,17 +406,19 @@ knitr::kable(results_x50_tab,
 
 results_x60_tab = results_x60 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
-  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd, deaths, deaths_sd)
+  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
+         ward_beds, ward_beds_sd, deaths, deaths_sd)
 
 knitr::kable(results_x60_tab,
-             caption = "Model output from 500 model runs for the 60\\% reduction scenario. SD: standard deviation.",
+             caption = "Model output from 500 model runs for the 60\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
              col.names = c("Date",
+                           "Bed needs", "SD",
                            "Bed needs", "SD",
                            "Bed needs", "SD",
                            "Average", "SD"),
              longtable = T, booktabs = T) %>%
-  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Deaths" = 2)) %>%
-  kable_styling(latex_options = c("striped", "repeat_header")) 
+  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Ward" = 2, "Deaths" = 2)) %>%
+  kable_styling(latex_options = c("striped", "repeat_header"))
 
 ```
 
@@ -417,16 +430,18 @@ knitr::kable(results_x60_tab,
 
 results_x73_tab = results_x73 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
-  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd, deaths, deaths_sd)
+  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
+         ward_beds, ward_beds_sd, deaths, deaths_sd)
 
 knitr::kable(results_x73_tab,
-             caption = "Model output from 500 model runs for the 73\\% reduction scenario. SD: standard deviation.",
+             caption = "Model output from 500 model runs for the 73\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
              col.names = c("Date",
+                           "Bed needs", "SD",
                            "Bed needs", "SD",
                            "Bed needs", "SD",
                            "Average", "SD"),
              longtable = T, booktabs = T) %>%
-  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Deaths" = 2)) %>%
+  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Ward" = 2, "Deaths" = 2)) %>%
   kable_styling(latex_options = c("striped", "repeat_header"))
 
 ```
