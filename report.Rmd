@@ -24,10 +24,10 @@ library(kableExtra)
 source("beds_needed_uclh_functions.R")
 
 #here specify the csv containing the predicted covid admission incidence
-cov_curve_all = read.csv("data/200401_pietro_preds.csv")
+cov_curve_all = read.csv("data/200402_pietro_preds.csv")
 colnames(cov_curve_all)[1] = "Date" #fix colnames
 
-run_duration = max(cov_curve_all$day) #run duration in days
+run_duration = max(cov_curve_all$day,na.rm = TRUE) #run duration in days
 nruns = 500
 params = list(
   # Pathways:
