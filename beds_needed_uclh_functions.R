@@ -167,7 +167,7 @@ plot_multi = function(results, save = F, filename = "plot"){
   HDU_capacity = c(rep(0,20), # nothing until 27th March
                    rep(8,19), # 8 until 15th April
                    rep(116,20), # on 15th April until early May (5th?)
-                   rep(155,length(cov_curve) - 59)) # jump to
+                   rep(155,length(results$time) - 59)) # jump to
   hdf <- tibble(time = seq_along(HDU_capacity), capacity = HDU_capacity)
   hdf$date <- results$date
   
