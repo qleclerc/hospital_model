@@ -18,7 +18,9 @@ uclh_model = function(cov_curve, params, run_duration){
       new_patients = round(new_patients * (prop_path1 + prop_path2))
       
       #draw randomly to sort patients into pathways
-      new_patients = rbinom(new_patients, 1, prop_path2/(prop_path1 + prop_path2))
+      #new_patients = rbinom(new_patients, 1, prop_path2/(prop_path1 + prop_path2))
+      new_patients = rbinom(new_patients, 1, 0.5)
+      
       new_patients = new_patients + 1
       #so 1s will go in path 1, and 2s go in path 2 (for consistency)
       
@@ -33,7 +35,8 @@ uclh_model = function(cov_curve, params, run_duration){
           #how long will that person need a bed for?
           LoS_ICU = rpois(1, average_LoS_ICU)
           patient_mortality = ifelse(runif(1) > ICU_mortality, FALSE, TRUE)
-          if (patient_mortality == TRUE) LoS_ICU = round(runif(1, 0, LoS_ICU))
+          #if (patient_mortality == TRUE) LoS_ICU = round(runif(1, 0, LoS_ICU))
+          if (patient_mortality == TRUE) LoS_ICU = rpois(1, 10)
           
           #update the patient pathway time (capped at the simulation duration)
           step1_time = min(t + LoS_ICU, run_duration)
@@ -83,7 +86,8 @@ uclh_model = function(cov_curve, params, run_duration){
           #how long will that person need a bed for?
           LoS_HDU = rpois(1, average_LoS_HDU)
           patient_mortality = ifelse(runif(1) > HDU_mortality, FALSE, TRUE)
-          if (patient_mortality == TRUE) LoS_HDU = round(runif(1, 0, LoS_HDU))
+          #if (patient_mortality == TRUE) LoS_HDU = round(runif(1, 0, LoS_HDU))
+          if (patient_mortality == TRUE) LoS_HDU = rpois(1, 6)
           
           #update the pathway time (capped at the simulation duration)
           step1_time = min(t + LoS_HDU, run_duration)

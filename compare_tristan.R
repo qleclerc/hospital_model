@@ -10,11 +10,12 @@ library(tidyverse)
 source("beds_needed_uclh_functions.R")
 
 #here specify the csv containing the predicted covid admission incidence
-cov_curve_all = read.csv("data/200401_pietro_preds.csv")
+cov_curve_all = read.csv("data/200402_pietro_preds.csv")
 colnames(cov_curve_all)[1] = "Date" #fix colnames
+cov_curve_all = cov_curve_all[c(1:149),]
 
 run_duration = max(cov_curve_all$day) #run duration in days
-nruns = 500
+nruns = 10
 params = list(
   # Pathways:
   #1: intubation (14 days ICU with 50% mortality, then 7 days HDU, then 14 days ward bed)
