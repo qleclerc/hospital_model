@@ -1,7 +1,7 @@
 ---
 title: "UCLH bed needs modelling"
 author: "Quentin Leclerc, Gwen Knight"
-date: "01/04/2020"
+date: "`r format(Sys.time(), '%A %d %B %Y')`"
 output:
   bookdown::pdf_document2:
     fig_width: 5
@@ -24,6 +24,7 @@ if (!require(knitr)) install.packages(knitr)
 if (!require(kableExtra)) install.packages(kableExtra)
 if (!require(openxlsx)) install.packages(openxlsx)
 if (!require(readr)) install.packages(readr)
+if (!require(here)) install.packages(here)
 
 library(ggplot2)
 library(dplyr)
@@ -33,11 +34,14 @@ library(knitr)
 library(kableExtra)
 library(openxlsx)
 library(readr)
+library(here)
 
-source("beds_needed_uclh_functions.R")
+base_dir = here()
+
+source(paste0(base_dir, "/code/beds_needed_uclh_functions.R"))
 
 #here specify the csv containing the predicted covid admission incidence
-cov_curve_all = read.csv("data/200402_pietro_preds.csv")
+cov_curve_all = read.csv(paste0(base_dir, "/data/200402_pietro_preds.csv"))
 colnames(cov_curve_all)[1] = "Date" #fix colnames
 cov_curve_all = cov_curve_all %>% drop_na()
 start_date = min(as.Date(cov_curve_all$Date, format = "%d/%m/%Y"))
@@ -55,7 +59,9 @@ params = list(
   
   # LoS:
   average_LoS_ICU = 14, #average LoS in ICU in days
+  average_LoS_ICU_death = 10, #average LoS in ICU in days if dies
   average_LoS_HDU = 7, #average LoS in HDU in days
+  average_LoS_HDU_death = 6, #average LoS in HDU in days if die
   average_LoS_ward1 = 14, #average LoS in ward in days (pathway 1)
   average_LoS_ward2 = 10) #average LoS in ward in days (pathway 2)
 
@@ -65,15 +71,15 @@ params = list(
 
 - Forecasted COVID19 hospital admissions, taking Pietro/Richard forecasts for 0% (base) / 20% / 40% / 50% / 60% / 73% reduction in contact rates (Figure \@ref(fig:covcurves))
 - Patient pathways
-    1) intubated (mechanical ventilation) – mean LoS assumption: 14 days in ICU (with 50% mortality), 7 days HDU, 14 days ward bed, then discharge
-    2) not intubated (non-invasive ventilation/CPAP) – mean LoS assumption: 7 days HDU (with 20% mortality), 10 days ward, then discharge
+    1) intubated (mechanical ventilation) – mean LoS assumption: `r params$average_LoS_ICU` days in ICU (with `r params$ICU_mortality*100`% mortality), `r params$average_LoS_HDU` days HDU, `r params$average_LoS_ward1` days ward bed, then discharge
+    2) not intubated (non-invasive ventilation/CPAP) – mean LoS assumption: `r params$average_LoS_HDU` days HDU (with `r params$HDU_mortality*100`% mortality), `r params$average_LoS_ward2` days ward, then discharge
 - Proportion of admissions going in each pathway:
     1) `r params$prop_path1*100`%
     2) `r params$prop_path2*100`%
 - Note: `r (1-params$prop_path1-params$prop_path2)*100`% of COVID19 admissions are not critical care, and go on another pathway straight to ward beds. This is not yet accounted for in the model.
 - Mortality:
-    1) 50% in ICU, for those admitted straight to ICU. Otherwise they survive to discharge at end of pathway
-    2) 20% in HDU, for those admitted straight to HDU. Otherwise they survive to discharge at end of pathway
+    1) `r params$ICU_mortality*100`% in ICU, for those admitted straight to ICU. Otherwise they survive to discharge at end of pathway
+    2) `r params$HDU_mortality*100`% in HDU, for those admitted straight to HDU. Otherwise they survive to discharge at end of pathway
 
 ```{r covcurves, fig.cap="Forecasted daily COVID19 hospital admissions. Scenarios are: basic, 20% reduction in contact rate, and 60% reduction in contact rates."}
 
@@ -88,16 +94,16 @@ cov_curve_all %>%
   labs(x = "Time (months)", y = "Forecasted number of COVID19 admissions", colour = "Scenario:") +
   theme_bw()
 
-ggsave("outputs/scenarios.png")
+ggsave(paste0(base_dir, "/outputs/scenarios.png"))
 
 ```
 
 
 # Model principle
 
-This model simulates the next few weeks of the epidemic. Every day, we assume a fixed `r (params$prop_path1+params$prop_path2)*100`% (`r params$prop_path1*100`% + `r params$prop_path2*100`%) of forecasted COVID19 admissions require critical care. For each admission, we randomly draw the pathway based on the proportions provided as input. The model then simulates the length of stay for each step in the pathway for each patient.
+This model simulates the next few weeks of the epidemic. Every day, we assume a fixed `r (params$prop_path1+params$prop_path2)*100`% of forecasted COVID19 admissions require critical care. For each admission, we randomly draw the pathway (50-50). The model then simulates the length of stay for each step in the pathway for each patient.
 
-For example, if a patient is admitted on day 1 and goes through pathway 1, we first randomly draw the length of stay in ICU from a Poisson distribution with mean `r params$average_LoS_ICU` days. We then establish whether that patient dies, based on the mortality in ICU (here, `r params$ICU_mortality*100`%). If the patient dies, we then sample the date of death based on a Uniform distribution from 0 to the sampled length of stay above, reduce the new length of stay accordingly, and record that a death has occured at that time. If the patient does not dies, he/she moves on to the next step of the pathway.
+For example, if a patient is admitted on day 1 and goes through pathway 1, we first establish whether that patient dies, based on the mortality in ICU (here, `r params$ICU_mortality*100`%). If the patient dies, we then sample the date of death based from a Poisson distribution with mean `r params$average_LoS_ICU_death`, and record that a death has occured at that time, and that an ICU bed will be needed up to that time. If the patient does not die, we randomly draw the length of stay in the ICU bed from a Poisson distribution with mean `r params$average_LoS_ICU` days. After this duration, the patient moves on to the next step of the pathway.
 
 We repeat the process to draw a length of stay for each remaining step (type of bed occupancy) in turn on the pathway, systematically recording the time interval when a bed will be needed. This allows us to account for the fact that beds are only needed for a limited period of time, and will eventually become available again for other patients.
 
@@ -170,7 +176,7 @@ ggplot() +
   theme_bw() + 
   geom_hline(aes(yintercept = ICU_capacity, colour = "ICU")) 
 
-ggsave("outputs/ICU_beds_all.png")
+ggsave(paste0(base_dir, "/outputs/ICU_beds_all.png"))
 
 
 ```
@@ -211,7 +217,7 @@ ggplot() +
   ggtitle("HDU") +
   geom_line(data = hdf, aes(x = date, y = capacity, colour = "HDU")) 
 
-ggsave("outputs/HDU_beds_all.png")
+ggsave(paste0(base_dir, "/outputs/HDU_beds_all.png"))
 
 
 ```
@@ -245,7 +251,7 @@ ggplot() +
   scale_y_continuous(breaks = seq(0,120,10)) +
   theme_bw()
 
-ggsave("outputs/deaths.png")
+ggsave(paste0(base_dir, "/outputs/deaths.png"))
 
 
 ```
@@ -254,7 +260,8 @@ ggsave("outputs/deaths.png")
 
 ```{r Tsummary}
 
-tab = table_multi(results_base, results_x20, results_x40, results_x50, results_x60, results_x73, save = T)
+tab = table_multi(results_base, results_x20, results_x40, results_x50, results_x60, results_x73,
+                  filename = paste0(base_dir, "/outputs/summary_tab"), save = T)
 kable(tab, format = "latex", booktabs = T,
       caption = "Summary model output from 500 model runs for all scenarios. Scenarios are: 0\\% reduction in contact rate (base), 20\\%, 40\\%, 50\\%, 60\\% and 73\\% reduction in contact rates SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
       col.names = c("Scenario",
@@ -283,37 +290,37 @@ kable(tab, format = "latex", booktabs = T,
 
 ```{r base, fig.cap="Output from 500 model runs for the base scenario. The horizontal lines represent the current maximum bed capacity for the different units.Lines are average daily incidence, shaded area represents average +/- standard deviation."}
 
-plot_multi(results_base, save = T, filename = "cov_pred_base")
+plot_multi(results_base, save = T, filename = paste0(base_dir, "/outputs/cov_pred_base"))
 
 ```
 
 ```{r x20, fig.cap="Output from 500 model runs for the 20% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
 
-plot_multi(results_x20, save = T, filename = "cov_pred_x20")
+plot_multi(results_x20, save = T, filename = paste0(base_dir, "/outputs/cov_pred_x20"))
 
 ```
 
 ```{r x40, fig.cap="Output from 500 model runs for the 40% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
 
-plot_multi(results_x40, save = T, filename = "cov_pred_x40")
+plot_multi(results_x40, save = T, filename = paste0(base_dir, "/outputs/cov_pred_x40"))
 
 ```
 
 ```{r x50, fig.cap="Output from 500 model runs for the 50% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
 
-plot_multi(results_x50, save = T, filename = "cov_pred_x50")
+plot_multi(results_x50, save = T, filename = paste0(base_dir, "/outputs/cov_pred_x50"))
 
 ```
 
 ```{r x60, fig.cap="Output from 500 model runs for the 60% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
 
-plot_multi(results_x60, save = T, filename = "cov_pred_x60")
+plot_multi(results_x60, save = T, filename = paste0(base_dir, "/outputs/cov_pred_x60"))
 
 ```
 
 ```{r x73, fig.cap="Output from 500 model runs for the 73% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
 
-plot_multi(results_x73, save = T, filename = "cov_pred_x73")
+plot_multi(results_x73, save = T, filename = paste0(base_dir, "/outputs/cov_pred_x73"))
 
 ```
 

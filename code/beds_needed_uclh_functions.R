@@ -33,10 +33,14 @@ uclh_model = function(cov_curve, params, run_duration){
           
           #STEP 1) patient is in ICU
           #how long will that person need a bed for?
-          LoS_ICU = rpois(1, average_LoS_ICU)
+          #this depends on whether that patient will die or not
           patient_mortality = ifelse(runif(1) > ICU_mortality, FALSE, TRUE)
           #if (patient_mortality == TRUE) LoS_ICU = round(runif(1, 0, LoS_ICU))
-          if (patient_mortality == TRUE) LoS_ICU = rpois(1, 10)
+          if (patient_mortality == TRUE) {
+            LoS_ICU = rpois(1, average_LoS_ICU_death)
+          } else{
+            LoS_ICU = rpois(1, average_LoS_ICU)
+          }
           
           #update the patient pathway time (capped at the simulation duration)
           step1_time = min(t + LoS_ICU, run_duration)
@@ -80,14 +84,18 @@ uclh_model = function(cov_curve, params, run_duration){
         } else {
           
           ## PATHWAY 2 ####
-          #2: no intubation (7 days HDU with 20% mortality, then 10 days ward)
+          #2: no intubation (7 days HDU with 50% mortality, then 10 days ward)
           
           #1) patient is in HDU
           #how long will that person need a bed for?
-          LoS_HDU = rpois(1, average_LoS_HDU)
+          #this depends on whether that patient will die or not
           patient_mortality = ifelse(runif(1) > HDU_mortality, FALSE, TRUE)
           #if (patient_mortality == TRUE) LoS_HDU = round(runif(1, 0, LoS_HDU))
-          if (patient_mortality == TRUE) LoS_HDU = rpois(1, 6)
+          if (patient_mortality == TRUE) {
+            LoS_HDU = rpois(1, average_LoS_HDU_death)
+          } else {
+            LoS_HDU = rpois(1, average_LoS_HDU)
+          }
           
           #update the pathway time (capped at the simulation duration)
           step1_time = min(t + LoS_HDU, run_duration)
@@ -194,7 +202,7 @@ plot_multi = function(results, save = F, filename = "plot"){
   
   plot(gg)
   
-  if (save == T) ggsave(paste0("outputs/",filename,".png"))
+  if (save == T) ggsave(paste0(filename,".png"))
   
 }
 
@@ -204,7 +212,7 @@ plot_multi = function(results, save = F, filename = "plot"){
 #in addition, it expects the results arguments to be named in a specific manner
 #i.e. to contain the percentage reduction (20,40 etc...)
 #if the name contains no number, the function assumes it is the "base 0%" scenario
-table_multi = function(..., save = F){
+table_multi = function(..., filename = NULL, save = F){
   
   res_table = c()
   res_list = lst(...)
@@ -250,7 +258,7 @@ table_multi = function(..., save = F){
                           "Peak ward bed needs timing", "Mean peak ward bed needs", "Ward SD",
                           "Cumulative deaths", "Deaths SD")
   
-  if (save == T) openxlsx::write.xlsx(res_table, "outputs/summary_table.xlsx")
+  if (save == T) openxlsx::write.xlsx(res_table, paste0(filename, ".xlsx"))
   
   return(res_table)
   
