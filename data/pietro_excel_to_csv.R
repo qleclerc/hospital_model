@@ -6,7 +6,7 @@ library(readr)
 library(openxlsx)
 
 ## open raw excel ####
-raw_data = openxlsx::read.xlsx("data/UCLH_arrivals_0304.xlsx")
+raw_data = openxlsx::read.xlsx("data/COVID19_UCLH_arrivals 5 April.xlsx")
 
 
 ## extract scenarios ####
@@ -21,7 +21,7 @@ dates = unlist(raw_data[,which(str_detect(raw_data, "Date"))])
 dates = dates[!is.na(dates)]
 head(dates) #should have "Date" first
 #ASSUMPTION that "Date" is first
-dates = as.Date(as.numeric(dates[-1]), origin = "1899-12-30") 
+dates = format(as.Date(as.numeric(dates[-1]), origin = "1899-12-30"), "%Y/%m/%d")
 
 
 ## extract admissions ####
@@ -40,8 +40,8 @@ colnames(all_incidence) = scenarios
 
 ## build clean dataset ####
 pred_summary = data.frame(Date = dates,
-                          time = seq(1, length(dates), 1))
+                          day = seq(1, length(dates), 1))
 pred_summary = cbind(pred_summary, all_incidence)
 
-filename = paste0("data/", format(Sys.Date(), "%y%d%m"), "_pietro_preds.csv")
+filename = paste0("data/", format(Sys.Date(), "%y%m%d"), "_pietro_preds.csv")
 write.csv(pred_summary, filename, row.names = F)
