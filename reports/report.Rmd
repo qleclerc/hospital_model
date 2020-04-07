@@ -41,10 +41,10 @@ base_dir = here()
 source(paste0(base_dir, "/code/beds_needed_uclh_functions.R"))
 
 #here specify the csv containing the predicted covid admission incidence
-cov_curve_all = read.csv(paste0(base_dir, "/data/200402_pietro_preds.csv"))
+cov_curve_all = read.csv(paste0(base_dir, "/data/200406_pietro_preds.csv"))
 colnames(cov_curve_all)[1] = "Date" #fix colnames
 cov_curve_all = cov_curve_all %>% drop_na()
-start_date = min(as.Date(cov_curve_all$Date, format = "%d/%m/%Y"))
+start_date = min(as.Date(cov_curve_all$Date))
 
 run_duration = max(cov_curve_all$day,na.rm = TRUE) #run duration in days
 nruns = 500
@@ -69,7 +69,7 @@ params = list(
 
 # Model input
 
-- Forecasted COVID19 hospital admissions, taking Pietro/Richard forecasts for 0% (base) / 20% / 40% / 50% / 60% / 73% reduction in contact rates (Figure \@ref(fig:covcurves))
+- Forecasted COVID19 hospital admissions, taking Pietro/Richard forecasts for 0% (base) / 20% / 40% / 50% / 60% / 70% / 80% reduction in contact rates (Figure \@ref(fig:covcurves))
 - Patient pathways
     1) intubated (mechanical ventilation) – mean LoS assumption: `r params$average_LoS_ICU` days in ICU (with `r params$ICU_mortality*100`% mortality), `r params$average_LoS_HDU` days HDU, `r params$average_LoS_ward1` days ward bed, then discharge
     2) not intubated (non-invasive ventilation/CPAP) – mean LoS assumption: `r params$average_LoS_HDU` days HDU (with `r params$HDU_mortality*100`% mortality), `r params$average_LoS_ward2` days ward, then discharge
@@ -81,16 +81,16 @@ params = list(
     1) `r params$ICU_mortality*100`% in ICU, for those admitted straight to ICU. Otherwise they survive to discharge at end of pathway
     2) `r params$HDU_mortality*100`% in HDU, for those admitted straight to HDU. Otherwise they survive to discharge at end of pathway
 
-```{r covcurves, fig.cap="Forecasted daily COVID19 hospital admissions. Scenarios are: basic, 20% reduction in contact rate, and 60% reduction in contact rates."}
+```{r covcurves, fig.cap="Forecasted daily COVID19 hospital admissions. Scenarios are: basic, 20%, 40%, 50%, 60%, 70% and 80% reduction in contact rates."}
 
 cov_curve_all %>%
   select(-day) %>%
-  mutate(Date = as.Date(Date, format = "%d/%m/%Y")) %>%
+  mutate(Date = as.Date(Date)) %>%
   melt(., id.vars = "Date") %>%
   ggplot(.) +
   geom_line(aes(Date, value, group = variable, colour = variable)) +
-  scale_colour_discrete(breaks = c("X0red", "X20red", "X40red", "X50red", "X60red", "X73red"),
-                        labels = c("Basic (0%)", "20%", "40%", "50%", "60%", "73%"), "Reduction\nlevel") +
+  scale_colour_discrete(breaks = c("X0pred", "X20pred", "X40pred", "X50pred", "X60pred", "X70pred", "X80pred"),
+                        labels = c("Basic (0%)", "20%", "40%", "50%", "60%", "70%", "80%"), "Reduction\nlevel") +
   labs(x = "Time (months)", y = "Forecasted number of COVID19 admissions", colour = "Scenario:") +
   theme_bw()
 
@@ -112,41 +112,45 @@ We repeat the process to draw a length of stay for each remaining step (type of 
 
 The model outputs the number of beds that would be needed each day to accommodate all of the admitted critical care COVID19 patients. The model can be run multiple times to provide us a mean and error range for these outputs. The uncertainty presented arises from the stochastic model sampling from distributions in length of stays in each bed type, and from proportions to assign the pathways to each patient. 
 
-Results from `r nruns` model runs for each of the 6 scenarios (base, 20%/40%/50%/60%/73% reduction) are presented below in summary Figures \@ref(fig:combicu), \@ref(fig:combhdu) and \@ref(fig:deaths), and summary Table \@ref(tab:Tsummary). More details for each scenario are given in Figures \@ref(fig:base), \@ref(fig:x20), \@ref(fig:x40), \@ref(fig:x50), \@ref(fig:x60) and \@ref(fig:x73), and Tables \@ref(tab:Tbase), \@ref(tab:Tx20), \@ref(tab:Tx40), \@ref(tab:Tx50), \@ref(tab:Tx60) and \@ref(tab:Tx73).
+Results from `r nruns` model runs for each of the 7 scenarios (base, 20%/40%/50%/60%/70%/80% reduction) are presented below in summary Figures \@ref(fig:combicu), \@ref(fig:combhdu) and \@ref(fig:deaths), and summary Table \@ref(tab:Tsummary). More details for each scenario are given in Figures \@ref(fig:base), \@ref(fig:x20), \@ref(fig:x40), \@ref(fig:x50), \@ref(fig:x60), \@ref(fig:x70) and \@ref(fig:x80), and Tables \@ref(tab:Tbase), \@ref(tab:Tx20), \@ref(tab:Tx40), \@ref(tab:Tx50), \@ref(tab:Tx60), \@ref(tab:Tx70) and \@ref(tab:Tx80).
 
 ```{r gen_all, include=FALSE, cache = TRUE}
 # cache option SAVES runs !
 
-cov_curve = cov_curve_all$X0red
+cov_curve = cov_curve_all$X0pred
 results_base = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
 results_base$date <- seq(start_date, by = "days", length.out = length(results_base[,1]))
 
-cov_curve = cov_curve_all$X20red
+cov_curve = cov_curve_all$X20pred
 results_x20 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
 results_x20$date <- seq(start_date, by = "days", length.out = length(results_x20[,1]))
 
-cov_curve = cov_curve_all$X40red
+cov_curve = cov_curve_all$X40pred
 results_x40 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
 results_x40$date <- seq(start_date, by = "days", length.out = length(results_x40[,1]))
 
-cov_curve = cov_curve_all$X50red
+cov_curve = cov_curve_all$X50pred
 results_x50 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
 results_x50$date <- seq(start_date, by = "days", length.out = length(results_x50[,1]))
 
-cov_curve = cov_curve_all$X60red
+cov_curve = cov_curve_all$X60pred
 results_x60 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
 results_x60$date <- seq(start_date, by = "days", length.out = length(results_x60[,1]))
 
-cov_curve = cov_curve_all$X73red
-results_x73 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
-results_x73$date <- seq(start_date, by = "days", length.out = length(results_x73[,1]))
+cov_curve = cov_curve_all$X70pred
+results_x70 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
+results_x70$date <- seq(start_date, by = "days", length.out = length(results_x70[,1]))
+
+cov_curve = cov_curve_all$X80pred
+results_x80 = multi_uclh_model(nruns = nruns, cov_curve, params, run_duration)
+results_x80$date <- seq(start_date, by = "days", length.out = length(results_x80[,1]))
 
 ```
 
 
 ## Summary
 
-```{r combicu, fig.cap="Output ICU bed demand from 500 model runs for the 20%, 40%, 50%, 60% and 73% reduction in contact rates. The horizontal lines represent the current maximum bed capacity. Lines are average daily requirements, shaded area represents average +/- standard deviation."}
+```{r combicu, fig.cap="Output ICU bed demand from 500 model runs for the 20%, 40%, 50%, 60%, 70% and 80% reduction in contact rates. The horizontal lines represent the current maximum bed capacity. Lines are average daily requirements, shaded area represents average +/- standard deviation."}
 ICU_capacity = 117
 
 ggplot() +
@@ -159,17 +163,20 @@ ggplot() +
   geom_line(data = results_x40, aes(date, ICU_beds, colour = "3")) +
   geom_ribbon(data = results_x40, aes(date, ymin = ICU_beds - ICU_beds_sd,
                                       ymax = ICU_beds + ICU_beds_sd, fill = "3"), alpha = 0.3) +
-    geom_line(data = results_x50, aes(date, ICU_beds, colour = "4")) +
+  geom_line(data = results_x50, aes(date, ICU_beds, colour = "4")) +
   geom_ribbon(data = results_x50, aes(date, ymin = ICU_beds - ICU_beds_sd,
                                       ymax = ICU_beds + ICU_beds_sd, fill = "4"), alpha = 0.3) +
-    geom_line(data = results_x60, aes(date, ICU_beds, colour = "5")) +
+  geom_line(data = results_x60, aes(date, ICU_beds, colour = "5")) +
   geom_ribbon(data = results_x60, aes(date, ymin = ICU_beds - ICU_beds_sd,
                                       ymax = ICU_beds + ICU_beds_sd, fill = "5"), alpha = 0.3) +
-    geom_line(data = results_x73, aes(date, ICU_beds, colour = "6")) +
-  geom_ribbon(data = results_x73, aes(date, ymin = ICU_beds - ICU_beds_sd,
+  geom_line(data = results_x70, aes(date, ICU_beds, colour = "6")) +
+  geom_ribbon(data = results_x70, aes(date, ymin = ICU_beds - ICU_beds_sd,
                                       ymax = ICU_beds + ICU_beds_sd, fill = "6"), alpha = 0.3) +
-  scale_colour_discrete(breaks = c("1", "2", "3","4","5","6"),
-                        labels = c("Basic (0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
+  geom_line(data = results_x80, aes(date, ICU_beds, colour = "7")) +
+  geom_ribbon(data = results_x80, aes(date, ymin = ICU_beds - ICU_beds_sd,
+                                      ymax = ICU_beds + ICU_beds_sd, fill = "7"), alpha = 0.3) +
+  scale_colour_discrete(breaks = c("1", "2", "3","4","5","6","7"),
+                        labels = c("Basic (0%)", "20%", "40%","50%","60%","70%","80%"),"Reduction\nlevel") +
   labs(x = "Time (months)", y = "Beds needed", colour = "Scenario:") +
   guides(fill = FALSE) +
   ggtitle("ICU") + 
@@ -181,7 +188,7 @@ ggsave(paste0(base_dir, "/outputs/ICU_beds_all.png"))
 
 ```
 
-```{r combhdu, fig.cap="Output HDU bed demand from 500 model runs for the 20%, 40%, 50%, 60% and 73% reduction in contact rates. The horizontal lines represent the current maximum bed capacity. Lines are average requirements, shaded area represents average +/- standard deviation."}
+```{r combhdu, fig.cap="Output HDU bed demand from 500 model runs for the 20%, 40%, 50%, 60%, 70% and 80% reduction in contact rates. The horizontal lines represent the current maximum bed capacity. Lines are average requirements, shaded area represents average +/- standard deviation."}
 
 HDU_capacity = c(rep(0,20), # nothing until 27th March
                  rep(8,19), # 8 until 15th April
@@ -200,17 +207,20 @@ ggplot() +
   geom_line(data = results_x40, aes(date, HDU_beds, colour = "3")) +
   geom_ribbon(data = results_x40, aes(date, ymin = HDU_beds - HDU_beds_sd,
                                       ymax = HDU_beds + HDU_beds_sd, fill = "3"), alpha = 0.3) +
-    geom_line(data = results_x50, aes(date, HDU_beds, colour = "4")) +
+  geom_line(data = results_x50, aes(date, HDU_beds, colour = "4")) +
   geom_ribbon(data = results_x50, aes(date, ymin = HDU_beds - HDU_beds_sd,
                                       ymax = HDU_beds + HDU_beds_sd, fill = "4"), alpha = 0.3) +
-    geom_line(data = results_x60, aes(date, HDU_beds, colour = "5")) +
+  geom_line(data = results_x60, aes(date, HDU_beds, colour = "5")) +
   geom_ribbon(data = results_x60, aes(date, ymin = HDU_beds - HDU_beds_sd,
                                       ymax = HDU_beds + HDU_beds_sd, fill = "5"), alpha = 0.3) +
-    geom_line(data = results_x73, aes(date, HDU_beds, colour = "6")) +
-  geom_ribbon(data = results_x73, aes(date, ymin = HDU_beds - HDU_beds_sd,
+  geom_line(data = results_x70, aes(date, HDU_beds, colour = "6")) +
+  geom_ribbon(data = results_x70, aes(date, ymin = HDU_beds - HDU_beds_sd,
                                       ymax = HDU_beds + HDU_beds_sd, fill = "6"), alpha = 0.3) +
-  scale_colour_discrete(breaks = c("1", "2", "3","4","5","6"),
-                        labels = c("Basic (0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
+  geom_line(data = results_x80, aes(date, HDU_beds, colour = "7")) +
+  geom_ribbon(data = results_x80, aes(date, ymin = HDU_beds - HDU_beds_sd,
+                                      ymax = HDU_beds + HDU_beds_sd, fill = "7"), alpha = 0.3) +
+  scale_colour_discrete(breaks = c("1", "2", "3","4","5","6","7"),
+                        labels = c("Basic (0%)", "20%", "40%","50%","60%","70%","80%"),"Reduction\nlevel") +
   labs(x = "Time (months)", y = "Beds needed", colour = "Scenario:") +
   guides(fill = FALSE) +
   theme_bw() + 
@@ -223,7 +233,7 @@ ggsave(paste0(base_dir, "/outputs/HDU_beds_all.png"))
 ```
 
 
-```{r deaths, fig.cap="Estimated incidence of mortality in COVID19 hospitalised patients from 500 model runs. Scenarios are: 0% reduction in contact rate (base), 20%, 40%, 50%, 60% and 73% reduction in contact rates. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
+```{r deaths, fig.cap="Estimated incidence of mortality in COVID19 hospitalised patients from 500 model runs. Scenarios are: 0% reduction in contact rate (base), 20%, 40%, 50%, 60%, 70% and 80% reduction in contact rates. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
 
 ggplot() +
   geom_line(data = results_base, aes(date, deaths, colour = "1")) +
@@ -235,17 +245,20 @@ ggplot() +
   geom_line(data = results_x40, aes(date, deaths, colour = "3")) +
   geom_ribbon(data = results_x40, aes(date, ymin = deaths - deaths_sd,
                                       ymax = deaths + deaths_sd, fill = "3"), alpha = 0.3) +
-    geom_line(data = results_x50, aes(date, deaths, colour = "4")) +
+  geom_line(data = results_x50, aes(date, deaths, colour = "4")) +
   geom_ribbon(data = results_x50, aes(date, ymin = deaths - deaths_sd,
                                       ymax = deaths + deaths_sd, fill = "4"), alpha = 0.3) +
-    geom_line(data = results_x60, aes(date, deaths, colour = "5")) +
+  geom_line(data = results_x60, aes(date, deaths, colour = "5")) +
   geom_ribbon(data = results_x60, aes(date, ymin = deaths - deaths_sd,
                                       ymax = deaths + deaths_sd, fill = "5"), alpha = 0.3) +
-    geom_line(data = results_x73, aes(date, deaths, colour = "6")) +
-  geom_ribbon(data = results_x73, aes(date, ymin = deaths - deaths_sd,
+  geom_line(data = results_x70, aes(date, deaths, colour = "6")) +
+  geom_ribbon(data = results_x70, aes(date, ymin = deaths - deaths_sd,
                                       ymax = deaths + deaths_sd, fill = "6"), alpha = 0.3) +
-  scale_colour_discrete(breaks = c("1", "2", "3","4","5","6"),
-                        labels = c("Basic (0%)", "20%", "40%","50%","60%","73%"),"Reduction\nlevel") +
+  geom_line(data = results_x80, aes(date, deaths, colour = "7")) +
+  geom_ribbon(data = results_x80, aes(date, ymin = deaths - deaths_sd,
+                                      ymax = deaths + deaths_sd, fill = "7"), alpha = 0.3) +
+  scale_colour_discrete(breaks = c("1", "2", "3","4","5","6","7"),
+                        labels = c("Basic (0%)", "20%", "40%","50%","60%","70%","80%"),"Reduction\nlevel") +
   labs(x = "Time (months)", y = "Incidence of COVID19 deaths in hospital", colour = "Scenario:") +
   guides(fill = FALSE) +
   scale_y_continuous(breaks = seq(0,120,10)) +
@@ -260,10 +273,11 @@ ggsave(paste0(base_dir, "/outputs/deaths.png"))
 
 ```{r Tsummary}
 
-tab = table_multi(results_base, results_x20, results_x40, results_x50, results_x60, results_x73,
+tab = table_multi(results_base, results_x20, results_x40, results_x50,
+                  results_x60, results_x70, results_x80,
                   filename = paste0(base_dir, "/outputs/summary_tab"), save = T)
 kable(tab, format = "latex", booktabs = T,
-      caption = "Summary model output from 500 model runs for all scenarios. Scenarios are: 0\\% reduction in contact rate (base), 20\\%, 40\\%, 50\\%, 60\\% and 73\\% reduction in contact rates SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
+      caption = "Summary model output from 500 model runs for all scenarios. Scenarios are: 0\\% reduction in contact rate (base), 20\\%, 40\\%, 50\\%, 60\\%, 70\\% and 80\\% reduction in contact rates SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
       col.names = c("Scenario",
                     "Peak time", "Mean beds", "SD",
                     "Peak time","Mean beds", "SD",
@@ -318,12 +332,17 @@ plot_multi(results_x60, save = T, filename = paste0(base_dir, "/outputs/cov_pred
 
 ```
 
-```{r x73, fig.cap="Output from 500 model runs for the 73% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
+```{r x70, fig.cap="Output from 500 model runs for the 70% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
 
-plot_multi(results_x73, save = T, filename = paste0(base_dir, "/outputs/cov_pred_x73"))
+plot_multi(results_x70, save = T, filename = paste0(base_dir, "/outputs/cov_pred_x70"))
 
 ```
 
+```{r x80, fig.cap="Output from 500 model runs for the 80% reduction scenario. The horizontal lines represent the current maximum bed capacity for the different units. Lines are average daily incidence, shaded area represents average +/- standard deviation."}
+
+plot_multi(results_x80, save = T, filename = paste0(base_dir, "/outputs/cov_pred_x80"))
+
+```
 
 ******
 
@@ -334,7 +353,7 @@ results_base_tab = results_base %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_base_tab$total = round(cov_curve_all$X0red*0.255)
+results_base_tab$total = round(cov_curve_all$X0pred*(params$prop_path1+params$prop_path2))
 
 knitr::kable(results_base_tab,
              caption = "Model output from 500 model runs for the base scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
@@ -360,7 +379,7 @@ results_x20_tab = results_x20 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_x20_tab$total = round(cov_curve_all$X20red*0.255)
+results_x20_tab$total = round(cov_curve_all$X20pred*(params$prop_path1+params$prop_path2))
 
 knitr::kable(results_x20_tab,
              caption = "Model output from 500 model runs for the 20\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
@@ -386,7 +405,7 @@ results_x40_tab = results_x40 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_x40_tab$total = round(cov_curve_all$X40red*0.255)
+results_x40_tab$total = round(cov_curve_all$X40pred*(params$prop_path1+params$prop_path2))
 
 knitr::kable(results_x40_tab,
              caption = "Model output from 500 model runs for the 40\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
@@ -412,7 +431,7 @@ results_x50_tab = results_x50 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_x50_tab$total = round(cov_curve_all$X50red*0.255)
+results_x50_tab$total = round(cov_curve_all$X50pred*(params$prop_path1+params$prop_path2))
 
 knitr::kable(results_x50_tab,
              caption = "Model output from 500 model runs for the 50\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
@@ -438,7 +457,7 @@ results_x60_tab = results_x60 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_x60_tab$total = round(cov_curve_all$X60red*0.255)
+results_x60_tab$total = round(cov_curve_all$X60pred*(params$prop_path1+params$prop_path2))
 
 knitr::kable(results_x60_tab,
              caption = "Model output from 500 model runs for the 60\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
@@ -458,16 +477,16 @@ knitr::kable(results_x60_tab,
 ******
 
 
-```{r Tx73}
+```{r Tx70}
 
-results_x73_tab = results_x73 %>%
+results_x70_tab = results_x70 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_x73_tab$total = round(cov_curve_all$X73red*0.255)
+results_x70_tab$total = round(cov_curve_all$X70pred*(params$prop_path1+params$prop_path2))
 
-knitr::kable(results_x73_tab,
-             caption = "Model output from 500 model runs for the 73\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
+knitr::kable(results_x70_tab,
+             caption = "Model output from 500 model runs for the 70\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
              col.names = c("Date",
                            "Bed needs", "SD",
                            "Bed needs", "SD",
@@ -480,3 +499,28 @@ knitr::kable(results_x73_tab,
 
 ```
 
+
+******
+
+
+```{r Tx80}
+
+results_x80_tab = results_x80 %>%
+  mutate_at(vars(ICU_beds:deaths_sd), round) %>%
+  select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
+         ward_beds, ward_beds_sd, deaths, deaths_sd)
+results_x80_tab$total = round(cov_curve_all$X80pred*(params$prop_path1+params$prop_path2))
+
+knitr::kable(results_x80_tab,
+             caption = "Model output from 500 model runs for the 80\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
+             col.names = c("Date",
+                           "Bed needs", "SD",
+                           "Bed needs", "SD",
+                           "Bed needs", "SD",
+                           "Average", "SD",
+                           "New patients (ICU+HDU)"),
+             longtable = T, booktabs = T) %>%
+  add_header_above(c(" " = 1, "ICU" = 2, "HDU" = 2, "Ward" = 2, "Deaths" = 2, " " = 1)) %>%
+  kable_styling(latex_options = c("striped", "repeat_header"))
+
+```
