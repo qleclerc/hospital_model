@@ -30,12 +30,13 @@ cov_curve_all %>%
 run_duration = max(cov_curve_all$day) #run duration in days
 
 params = list(
-  # Pathways:
+  prop_critical_care = 0.255, #proportion of admissions going to critical care
+  # Pathways in critical care:
   #1: intubation (14 days ICU with 50% mortality, then 7 days HDU, then 14 days ward bed)
-  prop_path1 = 0.18,
+  prop_path1 = 0.5, #proportion of critical care patients going through pathway 1
   ICU_mortality = 0.5,
   #2: no intubation (7 days HDU with 50% mortality, then 10 days ward)
-  prop_path2 = 0.075,
+  prop_path2 = 0.5, #proportion of critical care patients going through pathway 2
   HDU_mortality = 0.5,
   
   # LoS:

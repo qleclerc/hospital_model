@@ -12,10 +12,11 @@ source("code/beds_needed_uclh_functions.R")
 
 cov_curve_all = read.csv("data/200403_pietro_preds.csv")[1:242,]
 colnames(cov_curve_all)[1] = "Date"
+cov_curve_all[is.na(cov_curve_all)] = 0
 
 # cov_curve_all %>%
 #   select(-day) %>%
-#   mutate(Date = as.Date(Date, format = "%d/%m/%Y")) %>%
+#   mutate(Date = as.Date(Date) %>%
 #   melt(., id.vars = "Date") %>%
 #   ggplot(.) +
 #   geom_line(aes(Date, value, group = variable, colour = variable)) +
@@ -30,12 +31,14 @@ colnames(cov_curve_all)[1] = "Date"
 run_duration = max(cov_curve_all$day) #run duration in days
 
 params = list(
-  # Pathways:
+  prop_critical_care = 0.255, #proportion of admissions going to critical care
+  
+  # Pathways in critical care:
   #1: intubation (14 days ICU with 50% mortality, then 7 days HDU, then 14 days ward bed)
-  prop_path1 = 0.18,
+  prop_path1 = 0.5, #proportion of critical care patients going through pathway 1
   ICU_mortality = 0.5,
   #2: no intubation (7 days HDU with 50% mortality, then 10 days ward)
-  prop_path2 = 0.075,
+  prop_path2 = 0.5, #proportion of critical care patients going through pathway 2
   HDU_mortality = 0.5,
   
   # LoS:
@@ -59,7 +62,6 @@ for(ii in 1:6){
   ## Values to vary
   los_icu_vary <- seq(5,25,5)
   prop_to_p1 <- seq(0,100,10) # Proportion go to pathway 1 of the 25% that go to critical care
-  to_cc <- sum(params$prop_path1, params$prop_path2)
   
   results_all <- c()
   
@@ -67,8 +69,8 @@ for(ii in 1:6){
     for(j in 1:length(prop_to_p1)){
       
       params$average_LoS_ICU <- los_icu_vary[i]
-      params$prop_path1 <- to_cc * prop_to_p1[j]/100
-      params$prop_path2 <- to_cc * (1 - prop_to_p1[j]/100)
+      params$prop_path1 <- prop_to_p1[j]/100
+      params$prop_path2 <- (1 - prop_to_p1[j]/100)
       print(c(params$average_LoS_ICU, params$prop_path1))
       
       results_base = multi_uclh_model(nruns = 50, cov_curve, params, run_duration)
@@ -84,15 +86,15 @@ for(ii in 1:6){
   results_all <- as.data.frame(results_all)
   
   grped <- results_all %>% group_by(los, pp1) %>%
-                   summarise(ICU.max = max(ICU_beds), HDU.max = max(HDU_beds),
-                                icu.max.when = which.max(ICU_beds), hdu.max.when = which.max(HDU_beds))
+    summarise(ICU.max = max(ICU_beds), HDU.max = max(HDU_beds),
+              icu.max.when = which.max(ICU_beds), hdu.max.when = which.max(HDU_beds))
   
   g1<-ggplot(grped, aes(x = los, y = pp1)) + geom_tile(aes(fill = ICU.max)) + 
     ggtitle("ICU") + 
     scale_y_continuous("Proportion of all critical care to ICU on admission") + 
     scale_x_continuous("Length of stay in ICU") + 
     scale_fill_distiller(palette = "Spectral","Max. # beds",limits = c(0,2500))  
-    scale_fill_manual()
+  scale_fill_manual()
   ggsave(paste0("explore/",name,"icu_fill.pdf"))
   
   g2<-ggplot(grped, aes(x = los, y = pp1)) + geom_tile(aes(fill = HDU.max)) + 
@@ -141,7 +143,7 @@ for(ii in 1:6){
   
   cov_curve_all %>%
     select(-day) %>%
-    mutate(Date = as.Date(Date, format = "%d/%m/%Y")) %>%
+    mutate(Date = as.Date(Date)) %>%
     melt(., id.vars = "Date") %>%
     ggplot(.) +
     geom_line(aes(Date, 0.255*value, group = variable, colour = variable)) +

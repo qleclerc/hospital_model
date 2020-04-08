@@ -15,12 +15,12 @@ uclh_model = function(cov_curve, params, run_duration){
       
       #how many admissions at time t ?
       new_patients = cov_curve[t]
-      new_patients = round(new_patients * (prop_path1 + prop_path2))
+      #how many critical care admissions at time t ?
+      new_patients = round(new_patients * prop_critical_care)
       
-      #draw randomly to sort patients into pathways
-      #new_patients = rbinom(new_patients, 1, prop_path2/(prop_path1 + prop_path2))
-      new_patients = rbinom(new_patients, 1, 0.5)
-      
+      #draw randomly to sort critical care admissions into pathways
+      new_patients = rbinom(new_patients, 1, prop_path2)
+
       new_patients = new_patients + 1
       #so 1s will go in path 1, and 2s go in path 2 (for consistency)
       
@@ -210,7 +210,7 @@ plot_multi = function(results, save = F, filename = "plot"){
 #it will take any number of results inputs and make a summary table
 #however, there are no safety checks, so could break easily
 #in addition, it expects the results arguments to be named in a specific manner
-#i.e. to contain the percentage reduction (20,40 etc...)
+#i.e. to contain the percentage reduction (20, 40 etc...)
 #if the name contains no number, the function assumes it is the "base 0%" scenario
 table_multi = function(..., filename = NULL, save = F){
   

@@ -47,14 +47,16 @@ cov_curve_all = cov_curve_all %>% drop_na()
 start_date = min(as.Date(cov_curve_all$Date))
 
 run_duration = max(cov_curve_all$day,na.rm = TRUE) #run duration in days
-nruns = 500
+nruns = 10
 params = list(
-  # Pathways:
+  prop_critical_care = 0.255, #proportion of admissions going to critical care
+  
+  # Pathways in critical care:
   #1: intubation (14 days ICU with 50% mortality, then 7 days HDU, then 14 days ward bed)
-  prop_path1 = 0.18,
+  prop_path1 = 0.5, #proportion of critical care patients going through pathway 1
   ICU_mortality = 0.5,
   #2: no intubation (7 days HDU with 50% mortality, then 10 days ward)
-  prop_path2 = 0.075,
+  prop_path2 = 0.5, #proportion of critical care patients going through pathway 2
   HDU_mortality = 0.5,
   
   # LoS:
@@ -76,7 +78,7 @@ params = list(
 - Proportion of admissions going in each pathway:
     1) `r params$prop_path1*100`%
     2) `r params$prop_path2*100`%
-- Note: `r (1-params$prop_path1-params$prop_path2)*100`% of COVID19 admissions are not critical care, and go on another pathway straight to ward beds. This is not yet accounted for in the model.
+- Note: `r (1-params$prop_critical_care)*100`% of COVID19 admissions are not critical care, and go on another pathway straight to ward beds. This is not yet accounted for in the model.
 - Mortality:
     1) `r params$ICU_mortality*100`% in ICU, for those admitted straight to ICU. Otherwise they survive to discharge at end of pathway
     2) `r params$HDU_mortality*100`% in HDU, for those admitted straight to HDU. Otherwise they survive to discharge at end of pathway
@@ -101,7 +103,7 @@ ggsave(paste0(base_dir, "/outputs/scenarios.png"))
 
 # Model principle
 
-This model simulates the next few weeks of the epidemic. Every day, we assume a fixed `r (params$prop_path1+params$prop_path2)*100`% of forecasted COVID19 admissions require critical care. For each admission, we randomly draw the pathway (50-50). The model then simulates the length of stay for each step in the pathway for each patient.
+This model simulates the next few weeks of the epidemic. Every day, we assume a fixed `r (params$prop_critical_care)*100`% of forecasted COVID19 admissions require critical care. For each admission, we randomly assign the pathway based on the proportion of critical care patients going through each pathway (for pathway 1: `r (params$prop_path1)*100`%, and for pathway 2: `r (params$prop_path2)*100`%). The model then simulates the length of stay for each step in the pathway for each patient.
 
 For example, if a patient is admitted on day 1 and goes through pathway 1, we first establish whether that patient dies, based on the mortality in ICU (here, `r params$ICU_mortality*100`%). If the patient dies, we then sample the date of death based from a Poisson distribution with mean `r params$average_LoS_ICU_death`, and record that a death has occured at that time, and that an ICU bed will be needed up to that time. If the patient does not die, we randomly draw the length of stay in the ICU bed from a Poisson distribution with mean `r params$average_LoS_ICU` days. After this duration, the patient moves on to the next step of the pathway.
 
@@ -353,7 +355,7 @@ results_base_tab = results_base %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_base_tab$total = round(cov_curve_all$X0pred*(params$prop_path1+params$prop_path2))
+results_base_tab$total = round(cov_curve_all$X0pred*params$prop_critical_care)
 
 knitr::kable(results_base_tab,
              caption = "Model output from 500 model runs for the base scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
@@ -379,7 +381,7 @@ results_x20_tab = results_x20 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_x20_tab$total = round(cov_curve_all$X20pred*(params$prop_path1+params$prop_path2))
+results_x20_tab$total = round(cov_curve_all$X20pred*params$prop_critical_care)
 
 knitr::kable(results_x20_tab,
              caption = "Model output from 500 model runs for the 20\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
@@ -405,7 +407,7 @@ results_x40_tab = results_x40 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_x40_tab$total = round(cov_curve_all$X40pred*(params$prop_path1+params$prop_path2))
+results_x40_tab$total = round(cov_curve_all$X40pred*params$prop_critical_care)
 
 knitr::kable(results_x40_tab,
              caption = "Model output from 500 model runs for the 40\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
@@ -431,7 +433,7 @@ results_x50_tab = results_x50 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_x50_tab$total = round(cov_curve_all$X50pred*(params$prop_path1+params$prop_path2))
+results_x50_tab$total = round(cov_curve_all$X50pred*params$prop_critical_care)
 
 knitr::kable(results_x50_tab,
              caption = "Model output from 500 model runs for the 50\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
@@ -457,7 +459,7 @@ results_x60_tab = results_x60 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_x60_tab$total = round(cov_curve_all$X60pred*(params$prop_path1+params$prop_path2))
+results_x60_tab$total = round(cov_curve_all$X60pred*params$prop_critical_care)
 
 knitr::kable(results_x60_tab,
              caption = "Model output from 500 model runs for the 60\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
@@ -483,7 +485,7 @@ results_x70_tab = results_x70 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_x70_tab$total = round(cov_curve_all$X70pred*(params$prop_path1+params$prop_path2))
+results_x70_tab$total = round(cov_curve_all$X70pred*params$prop_critical_care)
 
 knitr::kable(results_x70_tab,
              caption = "Model output from 500 model runs for the 70\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
@@ -509,7 +511,7 @@ results_x80_tab = results_x80 %>%
   mutate_at(vars(ICU_beds:deaths_sd), round) %>%
   select(date, ICU_beds, ICU_beds_sd, HDU_beds, HDU_beds_sd,
          ward_beds, ward_beds_sd, deaths, deaths_sd)
-results_x80_tab$total = round(cov_curve_all$X80pred*(params$prop_path1+params$prop_path2))
+results_x80_tab$total = round(cov_curve_all$X80pred*params$prop_critical_care)
 
 knitr::kable(results_x80_tab,
              caption = "Model output from 500 model runs for the 80\\% reduction scenario. SD: standard deviation. Note that ward bed needs only represent the need for critical care patients, NOT the need for total COVID19 admissions.",
