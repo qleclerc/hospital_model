@@ -6,7 +6,7 @@ library(readr)
 library(openxlsx)
 
 ## open raw excel ####
-raw_data = openxlsx::read.xlsx("data/COVID19_UCLH_arrivals 5 April.xlsx")
+raw_data = openxlsx::read.xlsx("data/UCLH_arrivals_0604.xlsx", sheet=2)
 
 
 ## extract scenarios ####
@@ -29,7 +29,7 @@ all_incidence = raw_data[,which(str_detect(raw_data, "All ages"))]
 head(all_incidence) #first 3 rows should be rubbish
 #ASSUMPTION that first 3 rows should be removed
 #ASSUMPTION that rows past max date should be removed
-all_incidence = all_incidence[c(4:(3+length(dates))),]
+all_incidence = all_incidence[c(3:(2+length(dates))),]
 #break apart dataset and convert to numeric:
 all_incidence = as.numeric(unlist(all_incidence)) 
 #re-generate dataset:

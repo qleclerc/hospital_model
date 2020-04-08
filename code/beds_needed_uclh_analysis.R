@@ -7,19 +7,19 @@ library(reshape2)
 #Load model functions
 source("code/beds_needed_uclh_functions.R")
 
-cov_curve_all = read.csv("data/200402_pietro_preds.csv")
+cov_curve_all = read.csv("data/200406_pietro_preds.csv")
 colnames(cov_curve_all)[1] = "Date" #fix colnames
 cov_curve_all = cov_curve_all %>% drop_na()
-start_date = min(as.Date(cov_curve_all$Date, format = "%d/%m/%Y"))
+start_date = min(as.Date(cov_curve_all$Date))
 
 cov_curve_all %>%
   select(-day) %>%
-  mutate(Date = as.Date(Date, format = "%d/%m/%Y")) %>%
+  mutate(Date = as.Date(Date)) %>%
   melt(., id.vars = "Date") %>%
   ggplot(.) +
   geom_line(aes(Date, value, group = variable, colour = variable)) +
-  scale_colour_discrete(breaks = c("basic", "X20pred", "X60pred"),
-                        labels = c("Basic", "20% reduction", "60% reduction")) +
+  scale_colour_discrete(breaks = c("X0pred", "X20pred", "X40pred", "X50pred", "X60pred", "X70pred", "X80pred"),
+                        labels = c("Basic (0%)", "20%", "40%", "50%", "60%", "70%", "80%"), "Reduction\nlevel") +
   labs(x = "Time (months)", y = "Forecasted number of COVID19 admissions", colour = "Scenario:") +
   theme_bw()
 
@@ -50,7 +50,7 @@ params = list(
 ## SIMULATIONS ####
 
 #single simulation
-results = uclh_model(cov_curve_all$X0red, params, run_duration)
+results = uclh_model(cov_curve_all$X0pred, params, run_duration)
 
 results_beds = results %>%
   select(-deaths) %>%
@@ -65,7 +65,7 @@ ggplot(results_beds) +
 
 ## BASE SCENARIO ####
 
-cov_curve = cov_curve_all$X0red
+cov_curve = cov_curve_all$X0pred
 results_base = multi_uclh_model(nruns = 10, cov_curve, params, run_duration)
 results_base$date = seq(as.Date("2020/3/7"), by = "days", length.out = length(results_base[,1]))
 
@@ -73,7 +73,7 @@ plot_multi(results_base, save = F)
 
 ## 20% REDUCTION SCENARIO ####
 
-cov_curve = cov_curve_all$X20red
+cov_curve = cov_curve_all$X20pred
 results_x20 = multi_uclh_model(nruns = 10, cov_curve, params, run_duration)
 results_x20$date = seq(as.Date("2020/3/7"), by = "days", length.out = length(results_x20[,1]))
 
@@ -82,7 +82,7 @@ plot_multi(results_x20, save = F)
 
 ## 60% REDUCTION SCENARIO ####
 
-cov_curve = cov_curve_all$X60red
+cov_curve = cov_curve_all$X60pred
 results_x60 = multi_uclh_model(nruns = 10, cov_curve, params, run_duration)
 results_x60$date = seq(as.Date("2020/3/7"), by = "days", length.out = length(results_x60[,1]))
 
